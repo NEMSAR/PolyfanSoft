@@ -21,15 +21,15 @@
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    /* Contenedor mágico que corta la parte superior */
+   /* Contenedor mágico que corta la parte superior */
     .app-container {
       position: absolute;
-      /* Ajustá este valor negativo si la franja de Google asoma o se corta mucho (suele ser entre -45px y -56px) */
-      top: -45px; 
+      /* Redujimos el recorte para que no se coma tu logo */
+      top: -24px; 
       left: 0;
       width: 100%;
-      /* Le sumamos la misma cantidad que le restamos arriba para que llegue bien hasta el fondo */
-      height: calc(100% + 45px);
+      /* Asegurate de que este número coincida con el de arriba, pero en positivo */
+      height: calc(100% + 24px);
       z-index: 2;
     }
 
