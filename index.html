@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gestión PolyfanTech</title>
+  
+  <!-- Ícono de la pestaña (Favicon) y App de celular -->
+  <link rel="icon" type="image/png" href="https://i.imgur.com/U65ittY.png">
+  <link rel="apple-touch-icon" href="https://i.imgur.com/U65ittY.png">
+
+  <style>
+    /* Reseteo básico y color de fondo igual al de la app para que no haya parpadeos blancos */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0a0a0a;
+      overflow: hidden; /* Evita el scroll fuera del iframe */
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* Contenedor mágico que corta la parte superior */
+    .app-container {
+      position: absolute;
+      /* Ajustá este valor negativo si la franja de Google asoma o se corta mucho (suele ser entre -45px y -56px) */
+      top: -48px; 
+      left: 0;
+      width: 100%;
+      /* Le sumamos la misma cantidad que le restamos arriba para que llegue bien hasta el fondo */
+      height: calc(100% + 48px);
+      z-index: 2;
+    }
+
+    /* El iframe que carga la app de Apps Script */
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Pantalla de carga sutil mientras Google responde */
+    .loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      color: #e2ff00;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(226, 255, 0, 0.2);
+      border-top-color: #e2ff00;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mensaje de carga que queda por debajo del iframe -->
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <p>Conectando...</p>
+  </div>
+
+  <!-- Contenedor del iFrame -->
+  <div class="app-container">
+    <!-- REEMPLAZAR EL SRC POR EL ENLACE EJECUTABLE DE TU APPS SCRIPT -->
+    <iframe 
+      src="https://script.google.com/macros/s/AKfycbzTPV7UCb7Tlh3WMQInGnrBAhcUoikACS8HePlPCB98ad5DmygtvuobeJDQV07nBV5R/exec" 
+      allow="fullscreen" 
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+    </iframe>
+  </div>
+
+</body>
+</html>
