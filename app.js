@@ -203,9 +203,9 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const safeInventario = inventario || [];
   const safeProspectos = prospectos || [];
 
-  const ingresosHistoricos = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
-  const gastosTotales = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
-  const gastosCaja = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  const ingresosHistoricos = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + (Number(b.monto) || 0), 0), [safeFinanzas]);
+  const gastosTotales = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + (Number(b.monto) || 0), 0), [safeFinanzas]);
+  const gastosCaja = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + (Number(b.monto) || 0), 0), [safeFinanzas]);
   
   const balanceNeto = ingresosHistoricos - gastosTotales; 
   const cajaFisicaGlobal = ingresosHistoricos - gastosCaja; 
@@ -219,7 +219,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const entregasProximas = useMemo(() => {
     return safePedidos
       .filter(p => p.estado !== 'Completado' && p.fechaLimite)
-      .sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite))
+      .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime())
       .slice(0, 4); 
   }, [safePedidos]);
   
@@ -228,7 +228,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
     const resto = (Number(b.precioTotal) || 0) - (Number(b.sena) || 0);
     return a + (resto > 0 ? resto : 0);
   }, 0);
-  const stockCritico = safeInventario.filter(i => Number(i.cantidad) <= (Number(i.minimoCritico) || 0));
+  const stockCritico = safeInventario.filter(i => (Number(i.cantidad) || 0) <= (Number(i.minimoCritico) || 0));
 
   const generarListaComprasWhatsApp = () => {
     if (stockCritico.length === 0) return;
@@ -344,13 +344,14 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
            </h3>
            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
              {entregasProximas.length > 0 ? entregasProximas.map(p => {
-               const diasFaltantes = Math.ceil((new Date(p.fechaLimite) - new Date()) / (1000 * 60 * 60 * 24));
+               const diasFaltantes = Math.ceil((new Date(p.fechaLimite).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                const isUrgent = diasFaltantes <= 3;
                return (
                  <div key={p.id} className={`p-3 rounded-xl border ${isUrgent ? 'bg-red-900/10 border-red-500/30' : 'bg-[#0a0a0a] border-[#222]'}`}>
@@ -408,13 +409,13 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
     
     const data = { 
         tipo, 
-        monto: Number(monto), 
+        monto: Number(monto) || 0, 
         concepto, 
         origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), 
         registradoPor: loggedUser,
         categoriaGasto: tipo === 'Gasto' ? gastoCategoria : null,
         idInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? idInsumo : null,
-        cantidadInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? Number(cantidadInsumo) : null
+        cantidadInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? (Number(cantidadInsumo) || 0) : null
     };
 
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo && cantidadInsumo && !editId) {
@@ -427,22 +428,31 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
         });
     }
 
-    if (editId) db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
-    else db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
+    if (editId) {
+        db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    } else {
+        db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
+    }
   };
 
   const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
   
   const cargarParaEditar = (f) => { 
-      setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); 
-      setGastoCategoria(f.categoriaGasto || 'Otros'); setIdInsumo(f.idInsumo || ''); setCantidadInsumo(f.cantidadInsumo || '');
-      setEditId(f.id); window.scrollTo({ top: 0, behavior: 'smooth' }); 
+      setTipo(f.tipo || 'Ingreso'); 
+      setMonto(f.monto || ''); 
+      setConcepto(f.concepto || ''); 
+      setOrigen(f.origen || 'Caja Negocio'); 
+      setGastoCategoria(f.categoriaGasto || 'Otros'); 
+      setIdInsumo(f.idInsumo || ''); 
+      setCantidadInsumo(f.cantidadInsumo || '');
+      setEditId(f.id); 
+      window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
   
   const exportarCSV = () => {
     let csv = "Fecha,Tipo,Categoria,Origen/Destino,Concepto,Monto ($),Operador\n";
     safeFinanzas.forEach(f => { 
-      csv += `"${new Date(f.fecha).toLocaleDateString()}","${f.tipo}","${f.categoriaGasto || ''}","${f.origen || 'Caja Negocio'}","${f.concepto}","${f.monto}","${f.registradoPor}"\n`; 
+      csv += `"${f.fecha ? new Date(f.fecha).toLocaleDateString() : 'Sin Fecha'}","${f.tipo || ''}","${f.categoriaGasto || ''}","${f.origen || 'Caja Negocio'}","${f.concepto || ''}","${f.monto || 0}","${f.registradoPor || ''}"\n`; 
     });
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_Caja.csv`; link.click();
   };
@@ -450,16 +460,20 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const safeFinanzas = finanzas || [];
   const safeInventario = inventario || []; // PROTECCIÓN ANTI CRASH
 
-  // FECHA DE CORTE Y MATEMATICA RECIENTE (Ignorar viejas deudas)
-  const FECHA_CORTE = new Date("2026-09-17T14:00:00").getTime();
+  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
+  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
-  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  const listOrdenada = [...safeFinanzas].sort((a,b) => {
+      const tA = a.fecha ? new Date(a.fecha).getTime() : 0;
+      const tB = b.fecha ? new Date(b.fecha).getTime() : 0;
+      return tA - tB;
+  });
   
   listOrdenada.forEach(f => {
-      const isNew = new Date(f.fecha).getTime() >= FECHA_CORTE;
-      const m = Number(f.monto);
+      const isNew = f.fecha ? new Date(f.fecha).getTime() >= FECHA_CORTE : false;
+      const m = Number(f.monto) || 0;
 
       if (f.tipo === 'Ingreso') {
           cajaFisicaGlobal += m;
@@ -544,7 +558,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           )}
 
           {tipo === 'Gasto' && (
-            <>
+            <div className="w-full space-y-4">
               <div className="space-y-1.5 w-full">
                 <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿Qué tipo de gasto es?</label>
                 <select value={gastoCategoria} onChange={e => setGastoCategoria(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
@@ -576,7 +590,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                   <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
                 </select>
               </div>
-            </>
+            </div>
           )}
 
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
@@ -643,7 +657,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className="text-[9px] uppercase tracking-widest text-gray-500">{new Date(f.fecha).toLocaleDateString()}</span>
+                  <span className="text-[9px] uppercase tracking-widest text-gray-500">{f.fecha ? new Date(f.fecha).toLocaleDateString() : 'Sin Fecha'}</span>
                   <span className="text-[9px] uppercase tracking-widest text-gray-600 border-l border-[#444] pl-2">Ref: {f.registradoPor}</span>
                   {f.tipo === 'Gasto' && f.origen && f.origen !== 'Caja Negocio' && (
                     <span className="text-[8px] bg-[#e2ff00]/20 text-[#e2ff00] border border-[#e2ff00]/30 px-2 py-0.5 rounded uppercase font-bold tracking-widest ml-1">Pagó: {f.origen}</span>
@@ -661,10 +675,10 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                       <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
                     </div>
                   ) : (
-                    <>
+                    <div className="flex flex-col gap-1">
                       <button onClick={() => cargarParaEditar(f)} className="text-gray-400 hover:text-[#e2ff00] transition-colors p-1"><IconEdit /></button>
                       <button onClick={() => setDeleteId(f.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><IconTrash /></button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
