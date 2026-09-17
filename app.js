@@ -67,6 +67,9 @@ function ChartCanvas({ type, data, options, height = 250 }) {
   return <div style={{ height: `${height}px`, width: '100%', position: 'relative' }}><canvas ref={canvasRef}></canvas></div>;
 }
 
+// Formateador universal de unidades
+const formatUnidad = (u) => { if(u==='Metros') return 'm'; if(u==='Litros') return 'L'; if(u==='Gramos') return 'g'; return 'u'; };
+
 // --- COMPONENTE PRINCIPAL APP ---
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -135,7 +138,7 @@ function App() {
         </header>
 
         <div key={activeTab} className="animate-premium">
-          {activeTab === 'dashboard' && <DashboardView finanzas={finanzas} pedidos={pedidos} inventario={inventario} prospectos={prospectos} />}
+          {activeTab === 'dashboard' && <DashboardView finanzas={finanzas} pedidos={pedidos} inventario={inventario} prospectos={prospectos} setActiveTab={setActiveTab} />}
           {activeTab === 'pedidos' && <PedidosView pedidos={pedidos} inventario={inventario} loggedUser={loggedUser} showToast={showToast} pedidoToEdit={pedidoToEdit} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
@@ -195,7 +198,7 @@ function LoginScreen({ onLogin, showToast }) {
   );
 }
 
-function DashboardView({ finanzas, pedidos, inventario, prospectos }) {
+function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab }) {
   const safeFinanzas = finanzas || [];
   const safePedidos = pedidos || [];
   const safeInventario = inventario || [];
@@ -214,12 +217,28 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos }) {
   const totalPedidos = safePedidos.length; 
   const progresoPedidos = totalPedidos > 0 ? Math.round((pedidosCompletados / totalPedidos) * 100) : 0;
   
+  // FUNCIÓN PREMIUM: Radar de Entregas Urgentes
+  const entregasProximas = useMemo(() => {
+    return safePedidos
+      .filter(p => p.estado !== 'Completado' && p.fechaLimite)
+      .sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite))
+      .slice(0, 4); // Muestra solo los 4 más urgentes
+  }, [safePedidos]);
+  
   const leadsActivos = safeProspectos.filter(p => p.estado !== 'Frío').length;
   const dineroPorCobrar = safePedidos.filter(p => p.estado !== 'Completado').reduce((a, b) => {
     const resto = (Number(b.precioTotal) || 0) - (Number(b.sena) || 0);
     return a + (resto > 0 ? resto : 0);
   }, 0);
   const stockCritico = safeInventario.filter(i => Number(i.cantidad) <= (Number(i.minimoCritico) || 0));
+
+  // FUNCIÓN PREMIUM: Exportador WhatsApp de Lista de Compras
+  const generarListaComprasWhatsApp = () => {
+    if (stockCritico.length === 0) return;
+    const faltantes = stockCritico.map(i => `- ${i.nombre}: Quedan ${i.cantidad}${formatUnidad(i.unidad)}`).join('\n');
+    const msj = `*LISTA DE COMPRAS - POLYFANTECH* 🛒\n\nHola! Necesitamos reponer urgentemente los siguientes insumos que llegaron a su límite:\n\n${faltantes}\n\nPor favor pasame presupuesto. ¡Gracias!`;
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msj), "_blank");
+  };
 
   const barChartData = {
     labels: ['Caja Histórica'],
@@ -238,36 +257,32 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos }) {
     }]
   };
 
-  const chartOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#aaa', font: { size: 10 } } } },
-    scales: {
-      y: { grid: { color: '#333' }, ticks: { color: '#888', font: { size: 10 } } },
-      x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
-    }
-  };
-
-  const pieOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { color: '#aaa', font: { size: 10 } } } }
-  };
+  const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#aaa', font: { size: 10 } } } }, scales: { y: { grid: { color: '#333' }, ticks: { color: '#888', font: { size: 10 } } }, x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } } } };
+  const pieOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#aaa', font: { size: 10 } } } } };
 
   return (
     <div className="space-y-6 w-full">
+      
+      {/* ALERTA DE STOCK Y LISTA DE COMPRAS INTELIGENTE */}
       {stockCritico.length > 0 && (
         <div className="w-full bg-red-900/20 border-2 border-red-500/50 rounded-[2rem] p-5 md:p-6 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-red-500 text-white p-2.5 rounded-full"><IconAlertTriangle /></div>
-            <div>
-              <h3 className="text-red-400 font-black uppercase tracking-widest text-xs md:text-sm">Alerta de Compras Requerida</h3>
-              <p className="text-gray-300 text-[10px] md:text-xs mt-1">Suministros por debajo del umbral mínimo definido</p>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-red-500/20 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-500 text-white p-2.5 rounded-full"><IconAlertTriangle /></div>
+              <div>
+                <h3 className="text-red-400 font-black uppercase tracking-widest text-xs md:text-sm">Alerta de Suministros Crítica</h3>
+                <p className="text-gray-300 text-[10px] md:text-xs mt-1">Has alcanzado el umbral de alerta en {stockCritico.length} insumo(s).</p>
+              </div>
             </div>
+            <button onClick={generarListaComprasWhatsApp} className="w-full md:w-auto bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-5 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 transition-colors shadow-lg">
+              <IconWhatsApp /> Pedir a Proveedor
+            </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pl-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-2">
             {stockCritico.map(item => (
               <div key={item.id} className="flex justify-between items-center text-xs border border-red-500/30 bg-[#0a0a0a]/50 p-3 rounded-xl">
                 <span className="text-white font-bold truncate pr-2">{item.nombre}</span>
-                <span className="text-red-400 font-black bg-red-500/10 px-2.5 py-1 rounded-md whitespace-nowrap">Quedan: {item.cantidad}</span>
+                <span className="text-red-400 font-black bg-red-500/10 px-2.5 py-1 rounded-md whitespace-nowrap">Stock: {item.cantidad}</span>
               </div>
             ))}
           </div>
@@ -334,11 +349,41 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos }) {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        <div className="w-full lg:w-1/2 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
+        {/* RADAR DE ENTREGAS URGENTES */}
+        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
+           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+             <IconClock /> Radar de Entregas
+           </h3>
+           <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+             {entregasProximas.length > 0 ? entregasProximas.map(p => {
+               const diasFaltantes = Math.ceil((new Date(p.fechaLimite) - new Date()) / (1000 * 60 * 60 * 24));
+               const isUrgent = diasFaltantes <= 3;
+               return (
+                 <div key={p.id} className={`p-3 rounded-xl border ${isUrgent ? 'bg-red-900/10 border-red-500/30' : 'bg-[#0a0a0a] border-[#222]'}`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-white font-bold text-xs truncate max-w-[70%]">{p.cliente}</span>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${isUrgent ? 'bg-red-500 text-white' : 'bg-[#222] text-gray-400'}`}>
+                        {diasFaltantes < 0 ? 'Vencido' : diasFaltantes === 0 ? '¡HOY!' : `${diasFaltantes} días`}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 truncate">{p.detalle}</p>
+                 </div>
+               );
+             }) : (
+               <div className="h-full flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-[#222] rounded-xl">
+                  <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">No hay fechas límite<br/>próximas registradas.</p>
+               </div>
+             )}
+           </div>
+           <button onClick={() => setActiveTab('pedidos')} className="mt-4 w-full bg-[#111] hover:bg-[#222] border border-[#333] text-gray-400 text-[9px] uppercase font-bold py-2.5 rounded-lg transition-colors">
+             Ver Todos los Pedidos
+           </button>
+        </div>
+        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Métricas Financieras</h3>
            <ChartCanvas type="bar" data={barChartData} options={chartOptions} height={200} />
         </div>
-        <div className="w-full lg:w-1/2 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
+        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Status de Proyectos</h3>
            <ChartCanvas type="doughnut" data={pieChartData} options={pieOptions} height={200} />
         </div>
@@ -717,7 +762,7 @@ function InventarioView({ inventario, showToast }) {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <Input type="number" label="Cant. Real" value={cantidad} onChange={setCantidad} />
-              <Input type="number" label="Alerta Min." value={minimoCritico} onChange={setMinimoCritico} />
+              <Input type="number" label="Umbral Alerta (Min)" value={minimoCritico} onChange={setMinimoCritico} />
               <Input type="number" label="Costo U. ($)" value={costoUnitario} onChange={setCostoUnitario} />
             </div>
             <button onClick={guardarItem} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Guardar Insumo</button>
@@ -868,8 +913,8 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
 function PresupuestoView({ showToast }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
   
-  // ¡¡¡¡ MUY IMPORTANTE !!!! Reemplazá este enlace por la URL web final de Google Apps Script
-  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
+  // ¡¡¡¡ MUY IMPORTANTE !!!! Pegá tu URL de la web app de Google Apps Script aquí:
+  const URL_BACKEND_GAS = "PEGAR_URL_DE_APPS_SCRIPT_AQUI"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
