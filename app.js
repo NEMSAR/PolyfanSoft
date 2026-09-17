@@ -1,5 +1,4 @@
 const { useState, useEffect, useMemo, useRef } = React;
-// REGLA CRÍTICA: Traemos la base de datos que se conectó en el archivo anterior
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
@@ -27,6 +26,7 @@ const IconImage = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="no
 const IconTrendingUp = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
 const IconWallet = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>;
 const IconSparkles = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
+const IconShield = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
 
 function NavButton({ icon, label, active, onClick }) { 
   return ( 
@@ -67,7 +67,6 @@ function ChartCanvas({ type, data, options, height = 250 }) {
   return <div style={{ height: `${height}px`, width: '100%', position: 'relative' }}><canvas ref={canvasRef}></canvas></div>;
 }
 
-// Formateador universal de unidades
 const formatUnidad = (u) => { if(u==='Metros') return 'm'; if(u==='Litros') return 'L'; if(u==='Gramos') return 'g'; return 'u'; };
 
 // --- COMPONENTE PRINCIPAL APP ---
@@ -79,7 +78,6 @@ function App() {
   const [inventario, setInventario] = useState([]);
   const [prospectos, setProspectos] = useState([]); 
   const [toastMsg, setToastMsg] = useState(null);
-  
   const [pedidoToEdit, setPedidoToEdit] = useState(null);
 
   const showToast = (msg, type = 'success') => { 
@@ -345,6 +343,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -402,6 +401,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   const [insumosUsados, setInsumosUsados] = useState([]);
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null); 
+  const [generandoRemito, setGenerandoRemito] = useState(false);
 
   useEffect(() => {
     if (pedidoToEdit && db) {
@@ -443,6 +443,9 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   const guardarPedido = () => {
     if (!cliente || !detalle) return showToast('Faltan datos del cliente', 'error');
+    // Inicializamos el checklist premium para trazabilidad
+    const baseChecklist = { corte: false, lija: false, pintura: false, armado: false };
+    
     const data = { 
       cliente, detalle, prioridad, urlArchivo, celular, 
       precioTotal: Number(precioTotal) || 0, sena: Number(sena) || 0, 
@@ -453,7 +456,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
       db.collection('pedidos').doc(editId).update(data)
         .then(() => { procesarDescuentoInventario(); showToast('Pedido actualizado y stock descontado'); limpiarForm(); })
     } else {
-      db.collection('pedidos').add({ ...data, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser })
+      db.collection('pedidos').add({ ...data, estado: 'Pendiente', checklist: baseChecklist, fecha: new Date().toISOString(), registradoPor: loggedUser })
         .then(() => { procesarDescuentoInventario(); showToast('Pedido cargado y stock descontado'); limpiarForm(); })
     }
   };
@@ -462,6 +465,12 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     const estados = ['Pendiente', 'En Proceso', 'Completado']; 
     const nextEstado = estados[(estados.indexOf(estadoActual) + 1) % estados.length];
     db.collection('pedidos').doc(id).update({ estado: nextEstado }).then(() => showToast(`Movido a: ${nextEstado}`));
+  };
+
+  // FUNCIÓN PREMIUM: Toggle Checklist
+  const toggleChecklist = (id, currentChecklist, taskField) => {
+    const updated = { ...currentChecklist, [taskField]: !currentChecklist[taskField] };
+    db.collection('pedidos').doc(id).update({ checklist: updated });
   };
 
   const eliminarPedido = (id) => db.collection('pedidos').doc(id).delete().then(() => { showToast('Pedido eliminado'); setDeleteId(null); });
@@ -482,6 +491,60 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
   };
 
+  // FUNCIÓN PREMIUM: Exportador de Remito de Garantía
+  const exportarRemitoGarantia = (p) => {
+     setGenerandoRemito(true);
+     const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
+     setTimeout(() => {
+        let htmlContent = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #111; width: 600px; background-color: #ffffff; box-sizing: border-box; margin: 0; position: relative; border: 4px solid #111;">
+          <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px dashed #ccc; padding-bottom: 20px;">
+            <img src="${TICKET_LOGO_URL}?t=${new Date().getTime()}" crossorigin="anonymous" style="max-height: 70px; margin-bottom: 10px;" />
+            <h2 style="margin: 0; font-size: 22px; color: #000; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;">REMITO DE ENTREGA & GARANTÍA</h2>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+             <p style="margin: 5px 0; font-size: 15px;"><strong>Cliente:</strong> ${p.cliente}</p>
+             <p style="margin: 5px 0; font-size: 15px;"><strong>Fecha de Entrega:</strong> ${new Date().toLocaleDateString()}</p>
+             <p style="margin: 5px 0; font-size: 15px;"><strong>Detalle del Trabajo:</strong> ${p.detalle}</p>
+          </div>
+
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #eee;">
+             <h3 style="margin: 0 0 10px 0; font-size: 16px; text-transform: uppercase;">Resumen de Saldos</h3>
+             <p style="margin: 5px 0; font-size: 14px;">Total Presupuestado: $${Number(p.precioTotal).toLocaleString('es-AR')}</p>
+             <p style="margin: 5px 0; font-size: 14px;">Seña Abonada: $${Number(p.sena).toLocaleString('es-AR')}</p>
+             <p style="margin: 10px 0 0 0; font-size: 18px; font-weight: bold; color: ${resto > 0 ? '#d32f2f' : '#388e3c'}; border-top: 1px solid #ccc; padding-top: 10px;">
+                Saldo a Pagar al Retirar: $${resto.toLocaleString('es-AR')}
+             </p>
+          </div>
+
+          <div style="background-color: #111; color: #fff; padding: 25px; border-radius: 15px;">
+             <h3 style="margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; color: #e2ff00; letter-spacing: 1px;">Recomendaciones de Cuidado</h3>
+             <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8;">
+                <li><strong>Limpieza:</strong> Utilizar únicamente un paño seco o levemente húmedo con agua.</li>
+                <li><strong>Prohibido:</strong> NO utilizar solventes, alcohol, thinner ni productos abrasivos sobre el material pintado.</li>
+                <li><strong>Temperatura:</strong> Si su cartel es de interior, evitar la exposición directa y prolongada a fuentes de calor intenso o luz solar directa tras un vidrio.</li>
+                <li><strong>Instalación Eléctrica:</strong> Ante cualquier anomalía con la fuente de alimentación, desconectar inmediatamente y contactarnos.</li>
+             </ul>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="font-size: 12px; color: #444; font-weight: bold; margin: 0;">¡Gracias por confiar en PolyfanTech!</p>
+            <p style="font-size: 11px; color: #888; margin-top: 5px;">Recreo - Catamarca</p>
+          </div>
+        </div>
+        `;
+        const element = document.createElement('div'); element.innerHTML = htmlContent; 
+        element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
+        document.body.appendChild(element);
+        
+        window.html2canvas(element, { scale: 2, useCORS: true, allowTaint: true, windowWidth: 600, backgroundColor: '#ffffff' }).then(canvas => {
+          const link = document.createElement('a'); link.download = `RemitoGarantia_${p.cliente.replace(/\s+/g, '')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+          setGenerandoRemito(false); document.body.removeChild(element); showToast('¡Remito de Garantía Descargado!');
+        });
+     }, 600);
+  };
+
   const safePedidos = pedidos || [];
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
@@ -490,6 +553,13 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      {generandoRemito && (
+        <div className="fixed inset-0 z-[99999] bg-[#050505]/95 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-[#333] border-t-[#e2ff00] rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(226,255,0,0.2)]"></div>
+          <h2 className="text-[#e2ff00] text-sm font-black uppercase tracking-[0.3em]">Generando Remito y Garantía...</h2>
+        </div>
+      )}
+
       <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
         <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(226,255,0,0.15)] hover:scale-[1.02] transition-transform">
           {showForm ? 'Cerrar Panel' : <><IconPlus /> Cargar Nuevo Trabajo</>}
@@ -558,6 +628,8 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
       <div className="w-full md:w-[60%] lg:w-[65%] space-y-4">
         {pedidosFiltrados.map((p, i) => {
           const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
+          const chk = p.checklist || { corte: false, lija: false, pintura: false, armado: false };
+          
           return (
             <div key={p.id} className={`glass-panel p-5 md:p-6 rounded-3xl border transition-all animate-stagger md:flex md:flex-col md:gap-2 ${p.prioridad === 'Alta' ? 'border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.15)] bg-red-900/10' : p.prioridad === 'Media' ? 'border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.1)] bg-yellow-900/10' : 'border-[#333] hover:border-[#444]'}`} style={{animationDelay: `${i * 0.05}s`}}>
               <div className="flex justify-between items-start mb-3 md:mb-0">
@@ -583,6 +655,20 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                 </div>
               </div>
               <p className="text-sm md:text-base text-gray-300 my-4 bg-[#0a0a0a]/50 p-4 rounded-xl border border-[#222]/50 leading-relaxed">{p.detalle}</p>
+              
+              {/* FUNCION PREMIUM: Checklist Trazabilidad Taller (Sólo En Proceso) */}
+              {p.estado === 'En Proceso' && (
+                 <div className="mb-4 bg-[#050505]/80 border border-[#333] p-4 rounded-xl">
+                    <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconCheck /> Trazabilidad de Taller</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                       <button onClick={() => toggleChecklist(p.id, chk, 'corte')} className={`text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg border transition-all ${chk.corte ? 'bg-[#e2ff00] text-black border-[#e2ff00]' : 'bg-[#111] text-gray-500 border-[#333] hover:border-gray-500'}`}>Corte CNC</button>
+                       <button onClick={() => toggleChecklist(p.id, chk, 'lija')} className={`text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg border transition-all ${chk.lija ? 'bg-[#e2ff00] text-black border-[#e2ff00]' : 'bg-[#111] text-gray-500 border-[#333] hover:border-gray-500'}`}>Masilla/Lija</button>
+                       <button onClick={() => toggleChecklist(p.id, chk, 'pintura')} className={`text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg border transition-all ${chk.pintura ? 'bg-[#e2ff00] text-black border-[#e2ff00]' : 'bg-[#111] text-gray-500 border-[#333] hover:border-gray-500'}`}>Pintura</button>
+                       <button onClick={() => toggleChecklist(p.id, chk, 'armado')} className={`text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg border transition-all ${chk.armado ? 'bg-[#e2ff00] text-black border-[#e2ff00]' : 'bg-[#111] text-gray-500 border-[#333] hover:border-gray-500'}`}>Armado/LED</button>
+                    </div>
+                 </div>
+              )}
+
               {(Number(p.precioTotal) > 0 || Number(p.sena) > 0) && (
                 <div className="flex justify-between items-center bg-[#0a0a0a]/80 border border-[#333] p-3 rounded-xl mb-4 text-xs">
                   <div><span className="text-gray-500">Total:</span> <strong className="text-white">${Number(p.precioTotal).toLocaleString('es-AR')}</strong></div>
@@ -591,17 +677,29 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                 </div>
               )}
               <div className="md:flex md:justify-between md:items-center w-full">
-                <div className="mb-4 md:mb-0">
+                <div className="mb-4 md:mb-0 flex gap-3">
                   {p.urlArchivo && <a href={p.urlArchivo} target="_blank" rel="noreferrer" className="text-[10px] md:text-xs text-[#e2ff00] underline break-all hover:text-white transition-colors">Abrir Archivo</a>}
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => enviarWhatsApp(p)} className="flex-1 md:flex-none md:w-32 bg-[#1a2e1a] text-green-400 text-[10px] uppercase font-bold py-3.5 rounded-xl border border-green-900/30 flex items-center justify-center gap-2 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Chat</button>
+                
+                {/* FUNCION PREMIUM: Si está completado, muestra generador de Garantía */}
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                  {p.estado === 'Completado' && (
+                     <button onClick={() => exportarRemitoGarantia(p)} className="flex-1 md:flex-none md:w-48 bg-[#111] text-white text-[9px] uppercase font-bold py-3.5 rounded-xl border border-[#444] flex items-center justify-center gap-2 hover:bg-[#222] transition-colors"><IconShield /> Exportar Remito/Garantía</button>
+                  )}
+                  {p.estado !== 'Completado' && (
+                     <button onClick={() => enviarWhatsApp(p)} className="flex-1 md:flex-none md:w-32 bg-[#1a2e1a] text-green-400 text-[10px] uppercase font-bold py-3.5 rounded-xl border border-green-900/30 flex items-center justify-center gap-2 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Chat</button>
+                  )}
                   <button onClick={() => actualizarEstado(p.id, p.estado)} className="flex-1 md:flex-none md:w-40 bg-[#1a1a1a] text-white text-[10px] uppercase font-bold py-3.5 rounded-xl border border-[#333] hover:bg-[#222] transition-colors">Avanzar Etapa</button>
                 </div>
               </div>
             </div>
           );
         })}
+        {pedidosFiltrados.length === 0 && (
+          <div className="text-center p-10 border-2 border-dashed border-[#333] rounded-[2rem]">
+            <p className="text-gray-600 text-sm font-bold uppercase tracking-widest">No hay registros en esta etapa.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -634,7 +732,7 @@ function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPe
     if (window.confirm('¿El cliente confirmó? Esto lo moverá a Pedidos y abrirá su formulario para completar detalles.')) {
       db.collection('pedidos').add({ 
         cliente: p.nombre, detalle: p.interes, prioridad: 'Media', urlArchivo: '', celular: p.celular || '', 
-        precioTotal: 0, sena: 0, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser 
+        precioTotal: 0, sena: 0, estado: 'Pendiente', checklist: { corte: false, lija: false, pintura: false, armado: false }, fecha: new Date().toISOString(), registradoPor: loggedUser 
       }).then((docRef) => { 
         db.collection('prospectos').doc(p.id).delete(); 
         showToast('¡Venta Cerrada!', 'success'); 
@@ -1155,7 +1253,6 @@ function PresupuestoView({ showToast, loggedUser }) {
     }, 800);
   };
 
-  // FUNCIÓN PREMIUM: Guardar como Lead directo
   const guardarComoLead = () => {
     if(!betaCliente || !betaTrabajo) return showToast("Faltan datos del cliente/trabajo", "error");
     db.collection('prospectos').add({
@@ -1281,7 +1378,12 @@ function PresupuestoView({ showToast, loggedUser }) {
                     <span className="text-gray-400 text-sm md:text-base font-bold mt-2">PRECIO FINAL:</span> 
                     <div className="flex items-center">
                       <span className="text-[#e2ff00] text-3xl md:text-4xl font-black mr-2">$</span>
-                      <input type="number" value={precioAjustado} onChange={(e) => setPrecioAjustado(e.target.value)} className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-[#e2ff00] text-[#e2ff00] text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors" />
+                      <input 
+                        type="number" 
+                        value={precioAjustado} 
+                        onChange={(e) => setPrecioAjustado(e.target.value)} 
+                        className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-[#e2ff00] text-[#e2ff00] text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors"
+                      />
                     </div>
                   </div>
                   
@@ -1392,7 +1494,12 @@ function PresupuestoView({ showToast, loggedUser }) {
                 <span className="text-gray-400 text-sm md:text-base font-bold mt-2">PRECIO FINAL:</span> 
                 <div className="flex items-center">
                   <span className="text-purple-400 text-3xl md:text-4xl font-black mr-2">$</span>
-                  <input type="number" value={betaPrecioAjustado} onChange={(e) => setBetaPrecioAjustado(e.target.value)} className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-purple-500 text-purple-400 text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors" />
+                  <input 
+                    type="number" 
+                    value={betaPrecioAjustado} 
+                    onChange={(e) => setBetaPrecioAjustado(e.target.value)} 
+                    className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-purple-500 text-purple-400 text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors"
+                  />
                 </div>
               </div>
               
