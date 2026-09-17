@@ -47,7 +47,6 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -141,7 +140,7 @@ function App() {
           {activeTab === 'pedidos' && <PedidosView pedidos={pedidos} inventario={inventario} loggedUser={loggedUser} showToast={showToast} pedidoToEdit={pedidoToEdit} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
-          {activeTab === 'finanzas' && <FinanzasView finanzas={finanzas} loggedUser={loggedUser} showToast={showToast} />}
+          {activeTab === 'finanzas' && <FinanzasView finanzas={finanzas} inventario={inventario} loggedUser={loggedUser} showToast={showToast} />}
           {activeTab === 'presupuesto' && <PresupuestoView showToast={showToast} loggedUser={loggedUser} />}
         </div>
 
@@ -203,31 +202,13 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const safeInventario = inventario || [];
   const safeProspectos = prospectos || [];
 
-  // FECHA DE CORTE Y MATEMATICA RECIENTE
-  const FECHA_CORTE = new Date("2026-09-17T00:00:00").getTime();
-  let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0;
+  const ingresosHistoricos = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  const gastosTotales = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  const gastosCaja = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
   
-  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-  listOrdenada.forEach(f => {
-      const m = Number(f.monto);
-      if (f.tipo === 'Ingreso') {
-          cajaFisicaGlobal += m;
-          let disp = m;
-          if (deudaE > 0 || deudaG > 0) {
-              let mitad = disp / 2; let pE = Math.min(deudaE, mitad); let pG = Math.min(deudaG, mitad);
-              deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
-              if (disp > 0) {
-                  if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
-                  if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
-              }
-          }
-      } else {
-          if (f.origen === 'Emanuel') deudaE += m;
-          else if (f.origen === 'Gonzalo') deudaG += m;
-          else cajaFisicaGlobal -= m;
-      }
-  });
-
+  const balanceNeto = ingresosHistoricos - gastosTotales; 
+  const cajaFisicaGlobal = ingresosHistoricos - gastosCaja; 
+  
   const pedidosPendientes = safePedidos.filter(p => p.estado === 'Pendiente').length; 
   const pedidosProceso = safePedidos.filter(p => p.estado === 'En Proceso').length;
   const pedidosCompletados = safePedidos.filter(p => p.estado === 'Completado').length;
@@ -255,15 +236,11 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
     window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msj), "_blank");
   };
 
-  const ingresosHistoricos = safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0);
-  const gastosHistoricos = safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0);
-  const balanceNeto = ingresosHistoricos - gastosHistoricos; 
-
   const barChartData = {
     labels: ['Caja Histórica'],
     datasets: [
       { label: 'Ingresos Brutos', data: [ingresosHistoricos], backgroundColor: '#e2ff00', borderRadius: 4 },
-      { label: 'Gastos Totales', data: [gastosHistoricos], backgroundColor: '#ef4444', borderRadius: 4 }
+      { label: 'Gastos Totales', data: [gastosTotales], backgroundColor: '#ef4444', borderRadius: 4 }
     ]
   };
 
@@ -330,7 +307,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
             </div>
             <div className="text-center md:text-right w-full md:w-auto">
               <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Gastos Totales</p>
-              <p className="text-lg md:text-xl font-bold text-red-400">${gastosHistoricos.toLocaleString('es-AR')}</p>
+              <p className="text-lg md:text-xl font-bold text-red-400">${gastosTotales.toLocaleString('es-AR')}</p>
             </div>
           </div>
         </div>
@@ -403,6 +380,286 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Status de Proyectos</h3>
            <ChartCanvas type="doughnut" data={pieChartData} options={pieOptions} height={200} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
+  const [tipo, setTipo] = useState('Ingreso'); 
+  const [monto, setMonto] = useState(''); 
+  const [concepto, setConcepto] = useState(''); 
+  const [origen, setOrigen] = useState('Caja Negocio'); 
+  const [gastoCategoria, setGastoCategoria] = useState('Otros');
+  const [idInsumo, setIdInsumo] = useState('');
+  const [cantidadInsumo, setCantidadInsumo] = useState('');
+  const [editId, setEditId] = useState(null);
+
+  const limpiarForm = () => { 
+      setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); 
+      setGastoCategoria('Otros'); setIdInsumo(''); setCantidadInsumo('');
+      setEditId(null); setTipo('Ingreso'); 
+  };
+  
+  const guardarMovimiento = () => {
+    if (!monto || !concepto) return showToast('Faltan datos', 'error');
+    
+    const data = { 
+        tipo, 
+        monto: Number(monto), 
+        concepto, 
+        origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), 
+        registradoPor: loggedUser,
+        categoriaGasto: tipo === 'Gasto' ? gastoCategoria : null,
+        idInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? idInsumo : null,
+        cantidadInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? Number(cantidadInsumo) : null
+    };
+
+    if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo && cantidadInsumo && !editId) {
+        const itemRef = db.collection('inventario').doc(idInsumo);
+        itemRef.get().then(doc => {
+            if(doc.exists) {
+                const actual = Number(doc.data().cantidad) || 0;
+                itemRef.update({ cantidad: actual + Number(cantidadInsumo) });
+            }
+        });
+    }
+
+    if (editId) db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
+  };
+
+  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
+  const cargarParaEditar = (f) => { 
+      setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); 
+      setGastoCategoria(f.categoriaGasto || 'Otros'); setIdInsumo(f.idInsumo || ''); setCantidadInsumo(f.cantidadInsumo || '');
+      setEditId(f.id); window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
+  
+  const exportarCSV = () => {
+    let csv = "Fecha,Tipo,Categoria,Origen/Destino,Concepto,Monto ($),Operador\n";
+    safeFinanzas.forEach(f => { 
+      csv += `"${new Date(f.fecha).toLocaleDateString()}","${f.tipo}","${f.categoriaGasto || ''}","${f.origen || 'Caja Negocio'}","${f.concepto}","${f.monto}","${f.registradoPor}"\n`; 
+    });
+    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_Caja.csv`; link.click();
+  };
+
+  const safeFinanzas = finanzas || [];
+  
+  // FECHA DE CORTE Y MATEMATICA RECIENTE (Ignorar viejas deudas)
+  const FECHA_CORTE = new Date("2026-09-17T14:00:00").getTime();
+  let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
+  
+  let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
+
+  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  listOrdenada.forEach(f => {
+      const isNew = new Date(f.fecha).getTime() >= FECHA_CORTE;
+      const m = Number(f.monto);
+
+      if (f.tipo === 'Ingreso') {
+          cajaFisicaGlobal += m;
+          if (isNew) {
+              let disp = m;
+              if (deudaE > 0 || deudaG > 0) {
+                  let mitad = disp / 2; let pE = Math.min(deudaE, mitad); let pG = Math.min(deudaG, mitad);
+                  deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
+                  if (disp > 0) {
+                      if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
+                      if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
+                  }
+              }
+              if (disp > 0) fondoTaller += disp * 0.40;
+          }
+      } else {
+          if (isNew && f.categoriaGasto === 'Insumo') gastosInsumosNuevo += m;
+          if (isNew && f.categoriaGasto === 'Maquinaria') gastosMaquinariaNuevo += m;
+          if (isNew && (!f.categoriaGasto || f.categoriaGasto === 'Otros')) gastosOtrosNuevo += m;
+
+          if (f.origen === 'Caja Negocio' || !f.origen) {
+              cajaFisicaGlobal -= m;
+              if (isNew) fondoTaller -= m;
+          } else if (f.origen === 'Emanuel') {
+              if (isNew) deudaE += m;
+          } else if (f.origen === 'Gonzalo') {
+              if (isNew) deudaG += m;
+          }
+      }
+  });
+
+  // SIMULADOR EN TIEMPO REAL
+  let simMonto = Number(monto) || 0;
+  let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
+
+  if (tipo === 'Ingreso' && simMonto > 0) {
+      let tDeudaE = deudaE; let tDeudaG = deudaG;
+      let disp = simMonto;
+
+      if (tDeudaE > 0 || tDeudaG > 0) {
+          let mitad = disp / 2;
+          let pE = Math.min(tDeudaE, mitad); let pG = Math.min(tDeudaG, mitad);
+          simDeudaE += pE; simDeudaG += pG;
+          tDeudaE -= pE; tDeudaG -= pG; disp -= (pE + pG);
+          if (disp > 0) {
+              if (tDeudaE > 0) { let ex = Math.min(tDeudaE, disp); simDeudaE += ex; disp -= ex; }
+              if (tDeudaG > 0) { let ex = Math.min(tDeudaG, disp); simDeudaG += ex; disp -= ex; }
+          }
+      }
+      if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
+  }
+
+  const listInversa = [...listOrdenada].reverse();
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[45%] lg:w-[40%] space-y-6 flex-shrink-0 md:sticky md:top-10">
+        <div className="glass-panel border border-[#333] p-6 md:p-8 rounded-[2rem] space-y-5">
+          <h2 className="text-[#e2ff00] text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-center">Control de Caja</h2>
+          <div className="flex p-1.5 bg-[#0a0a0a] rounded-2xl border border-[#222]">
+            <button onClick={() => {setTipo('Ingreso'); setOrigen('Caja Negocio');}} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${tipo === 'Ingreso' ? 'bg-[#1a2e1a] text-green-400 border border-green-900/50' : 'text-gray-600 hover:text-gray-400'}`}>Ingreso</button>
+            <button onClick={() => setTipo('Gasto')} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${tipo === 'Gasto' ? 'bg-[#2e1a1a] text-red-400 border border-red-900/50' : 'text-gray-600 hover:text-gray-400'}`}>Gasto</button>
+          </div>
+          <Input type="number" label="Monto Real ($)" value={monto} onChange={setMonto} />
+          
+          {tipo === 'Ingreso' && simMonto > 0 && (
+            <div className="bg-[#111] p-4 rounded-xl border border-green-900/50 animate-premium">
+              <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconWallet /> Distribución Sugerida de este Ingreso</p>
+              <div className="space-y-2">
+                {simDeudaE > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Emanuel:</span> <span className="text-white">${simDeudaE.toLocaleString('es-AR')}</span></div>}
+                {simDeudaG > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Gonzalo:</span> <span className="text-white">${simDeudaG.toLocaleString('es-AR')}</span></div>}
+                <div className="flex justify-between text-xs pt-2 border-t border-[#222]"><span className="text-gray-400 font-bold uppercase tracking-wider">Guardar en Taller (40%):</span> <span className="text-[#e2ff00] font-bold">${simFondo.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Emanuel (30%):</span> <span className="text-blue-400 font-bold">${simDivE.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Gonzalo (30%):</span> <span className="text-green-400 font-bold">${simDivG.toLocaleString('es-AR')}</span></div>
+              </div>
+            </div>
+          )}
+
+          {tipo === 'Gasto' && (
+            <>
+              <div className="space-y-1.5 w-full">
+                <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿Qué tipo de gasto es?</label>
+                <select value={gastoCategoria} onChange={e => setGastoCategoria(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
+                  <option value="Otros">Gasto General / Otros</option>
+                  <option value="Insumo">Compra de Insumos (Stock)</option>
+                  <option value="Maquinaria">Herramientas / Maquinaria</option>
+                </select>
+              </div>
+
+              {gastoCategoria === 'Insumo' && (
+                <div className="bg-[#0a0a0a] p-4 rounded-xl border border-[#333] animate-premium">
+                   <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">¿Qué insumo ingresa al taller?</label>
+                   <div className="flex gap-2 mt-2">
+                       <select value={idInsumo} onChange={e => setIdInsumo(e.target.value)} className="flex-1 glass-panel bg-[#111] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
+                           <option value="">Seleccionar del catálogo...</option>
+                           {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                       </select>
+                       <input type="number" value={cantidadInsumo} onChange={e => setCantidadInsumo(e.target.value)} placeholder="Cant." className="w-20 glass-panel bg-[#111] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
+                   </div>
+                   <p className="text-[8px] text-gray-500 mt-2">Se sumará automáticamente esta cantidad a las existencias del inventario al guardar.</p>
+                </div>
+              )}
+
+              <div className="space-y-1.5 w-full">
+                <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿De dónde salió el dinero?</label>
+                <select value={origen} onChange={e => setOrigen(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
+                  <option value="Caja Negocio">Caja Fuerte (Dinero del Taller)</option>
+                  <option value="Emanuel">Inversión de Emanuel (Bolsillo)</option>
+                  <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
+          
+          <div className="flex gap-3 pt-2">
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+            <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
+              {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
+            </button>
+          </div>
+        </div>
+
+        <div className="glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg bg-[#111]">
+          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Estado del Negocio (Nuevo Ciclo)</h3>
+          <div className="space-y-3 mb-6">
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Emanuel</span><span className="font-black text-white">${deudaE.toLocaleString('es-AR')}</span></div>
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Gonzalo</span><span className="font-black text-white">${deudaG.toLocaleString('es-AR')}</span></div>
+          </div>
+          <div className="border-t border-[#222] pt-4">
+            <span className="text-[10px] text-[#e2ff00] uppercase font-black tracking-widest mb-2 flex items-center gap-1"><IconWallet /> Caja Exclusiva del Taller (Fondo)</span>
+            <span className="text-3xl font-black text-[#e2ff00] block mb-2">${fondoTaller.toLocaleString('es-AR')}</span>
+            <p className="text-[8px] text-gray-500 uppercase tracking-widest leading-relaxed mt-2">Este fondo acumula el 40% de los nuevos ingresos y se descuenta al registrar Gastos pagados con la "Caja Fuerte".</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
+        {/* PREMIUM: Radar Financiero de Egresos */}
+        <div className="flex gap-2 w-full mb-6">
+           <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
+              <span className="text-xl font-black text-blue-400">${gastosInsumosNuevo.toLocaleString('es-AR')}</span>
+           </div>
+           <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Herramientas</span>
+              <span className="text-xl font-black text-purple-400">${gastosMaquinariaNuevo.toLocaleString('es-AR')}</span>
+           </div>
+           <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Gastos Grales</span>
+              <span className="text-xl font-black text-red-400">${gastosOtrosNuevo.toLocaleString('es-AR')}</span>
+           </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-4 pl-2 pr-1 border-b border-[#333]/50 pb-4">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Historial de Transacciones</h3>
+          <button onClick={exportarCSV} className="text-[9px] uppercase tracking-widest font-bold text-[#e2ff00] bg-[#e2ff00]/10 px-4 py-2 rounded-full border border-[#e2ff00]/20 hover:bg-[#e2ff00]/20 transition-colors">Exportar Excel</button>
+        </div>
+
+        <div className="space-y-3">
+          {listInversa.map((f, i) => (
+            <div key={f.id} className={`glass-panel p-5 rounded-2xl flex justify-between items-center border transition-all animate-stagger ${editId === f.id ? 'border-[#e2ff00] bg-[#e2ff00]/5' : 'border-[#333] hover:border-[#555]'}`} style={{animationDelay: `${i * 0.04}s`}}>
+              <div className="flex-1 pr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-bold text-white text-base leading-tight">{f.concepto}</p>
+                  {f.tipo === 'Gasto' && f.categoriaGasto && (
+                    <span className="text-[8px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded uppercase font-bold border border-purple-500/20">{f.categoriaGasto}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="text-[9px] uppercase tracking-widest text-gray-500">{new Date(f.fecha).toLocaleDateString()}</span>
+                  <span className="text-[9px] uppercase tracking-widest text-gray-600 border-l border-[#444] pl-2">Ref: {f.registradoPor}</span>
+                  {f.tipo === 'Gasto' && f.origen && f.origen !== 'Caja Negocio' && (
+                    <span className="text-[8px] bg-[#e2ff00]/20 text-[#e2ff00] border border-[#e2ff00]/30 px-2 py-0.5 rounded uppercase font-bold tracking-widest ml-1">Pagó: {f.origen}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 md:gap-4">
+                <span className={`font-black text-xl whitespace-nowrap ${f.tipo === 'Ingreso' ? 'text-green-400' : 'text-red-400'}`}>
+                  {f.tipo === 'Ingreso' ? '+' : '-'}${Number(f.monto).toLocaleString('es-AR')}
+                </span>
+                <div className="flex flex-col gap-1.5 border-l border-[#333] pl-3 md:pl-4">
+                  {deleteId === f.id ? (
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => eliminarMov(f.id)} className="bg-red-600 text-white font-bold text-[9px] px-2 py-1.5 rounded hover:bg-red-500 transition-colors">Borrar</button>
+                      <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
+                    </div>
+                  ) : (
+                    <>
+                      <button onClick={() => cargarParaEditar(f)} className="text-gray-400 hover:text-[#e2ff00] transition-colors p-1"><IconEdit /></button>
+                      <button onClick={() => setDeleteId(f.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><IconTrash /></button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          {listInversa.length === 0 && (
+            <div className="text-center p-10 border-2 border-dashed border-[#333] rounded-[2rem]">
+              <p className="text-gray-600 text-sm font-bold uppercase tracking-widest">Caja vacía.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -919,330 +1176,30 @@ function InventarioView({ inventario, showToast }) {
   );
 }
 
-function FinanzasView({ finanzas, loggedUser, showToast }) {
-  const [tipo, setTipo] = useState('Ingreso'); 
-  const [monto, setMonto] = useState(''); 
-  const [concepto, setConcepto] = useState(''); 
-  const [origen, setOrigen] = useState('Caja Negocio'); 
-  const [editId, setEditId] = useState(null);
-
-  const limpiarForm = () => { setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); setEditId(null); setTipo('Ingreso'); };
-  
-  const guardarMovimiento = () => {
-    if (!monto || !concepto) return showToast('Faltan datos', 'error');
-    const data = { tipo, monto: Number(monto), concepto, origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), registradoPor: loggedUser };
-    if (editId) db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
-    else db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
-  };
-
-  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
-  const cargarParaEditar = (f) => { setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); setEditId(f.id); };
-  
-  const safeFinanzas = finanzas || [];
-  const FECHA_CORTE = new Date("2026-09-17T00:00:00").getTime();
-  let cajaFisica = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
-
-  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-
-  listOrdenada.forEach(f => {
-      const isNew = new Date(f.fecha).getTime() >= FECHA_CORTE;
-      const m = Number(f.monto);
-
-      if (f.tipo === 'Ingreso') {
-          cajaFisica += m;
-          let disp = m;
-
-          if (deudaE > 0 || deudaG > 0) {
-              let mitad = disp / 2;
-              let pE = Math.min(deudaE, mitad);
-              let pG = Math.min(deudaG, mitad);
-              deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
-              if (disp > 0) {
-                  if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
-                  if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
-              }
-          }
-          if (disp > 0 && isNew) fondoTaller += disp * 0.40;
-      } else {
-          if (f.origen === 'Emanuel') deudaE += m;
-          else if (f.origen === 'Gonzalo') deudaG += m;
-          else {
-              cajaFisica -= m;
-              if (isNew) fondoTaller -= m;
-          }
-      }
-  });
-
-  // SIMULADOR EN TIEMPO REAL
-  let simMonto = Number(monto) || 0;
-  let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
-
-  if (tipo === 'Ingreso' && simMonto > 0) {
-      let tDeudaE = deudaE; let tDeudaG = deudaG;
-      let disp = simMonto;
-
-      if (tDeudaE > 0 || tDeudaG > 0) {
-          let mitad = disp / 2;
-          let pE = Math.min(tDeudaE, mitad); let pG = Math.min(tDeudaG, mitad);
-          simDeudaE += pE; simDeudaG += pG;
-          tDeudaE -= pE; tDeudaG -= pG; disp -= (pE + pG);
-          if (disp > 0) {
-              if (tDeudaE > 0) { let ex = Math.min(tDeudaE, disp); simDeudaE += ex; disp -= ex; }
-              if (tDeudaG > 0) { let ex = Math.min(tDeudaG, disp); simDeudaG += ex; disp -= ex; }
-          }
-      }
-
-      if (disp > 0) {
-          simFondo = disp * 0.40;
-          simDivE = disp * 0.30;
-          simDivG = disp * 0.30;
-      }
-  }
-
-  const listInversa = [...listOrdenada].reverse();
-
-  return (
-    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
-      <div className="w-full md:w-[45%] lg:w-[40%] space-y-6 flex-shrink-0 md:sticky md:top-10">
-        <div className="glass-panel border border-[#333] p-6 md:p-8 rounded-[2rem] space-y-5">
-          <h2 className="text-[#e2ff00] text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-center">Control de Caja</h2>
-          <div className="flex p-1.5 bg-[#0a0a0a] rounded-2xl border border-[#222]">
-            <button onClick={() => {setTipo('Ingreso'); setOrigen('Caja Negocio');}} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest ${tipo === 'Ingreso' ? 'bg-[#1a2e1a] text-green-400' : 'text-gray-600'}`}>Ingreso</button>
-            <button onClick={() => setTipo('Gasto')} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest ${tipo === 'Gasto' ? 'bg-[#2e1a1a] text-red-400' : 'text-gray-600'}`}>Gasto</button>
-          </div>
-          <Input type="number" label="Monto Real ($)" value={monto} onChange={setMonto} />
-          
-          {/* BANNER DINÁMICO DE SIMULACIÓN */}
-          {tipo === 'Ingreso' && simMonto > 0 && (
-            <div className="bg-[#111] p-4 rounded-xl border border-green-900/50 animate-premium">
-              <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconWallet /> Distribución Sugerida de este Ingreso</p>
-              <div className="space-y-2">
-                {simDeudaE > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Emanuel:</span> <span className="text-white">${simDeudaE.toLocaleString('es-AR')}</span></div>}
-                {simDeudaG > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Gonzalo:</span> <span className="text-white">${simDeudaG.toLocaleString('es-AR')}</span></div>}
-                <div className="flex justify-between text-xs pt-2 border-t border-[#222]"><span className="text-gray-400 font-bold uppercase tracking-wider">Guardar en Taller (40%):</span> <span className="text-[#e2ff00] font-bold">${simFondo.toLocaleString('es-AR')}</span></div>
-                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Emanuel (30%):</span> <span className="text-blue-400 font-bold">${simDivE.toLocaleString('es-AR')}</span></div>
-                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Gonzalo (30%):</span> <span className="text-green-400 font-bold">${simDivG.toLocaleString('es-AR')}</span></div>
-              </div>
-            </div>
-          )}
-
-          {tipo === 'Gasto' && (
-            <div className="space-y-1.5 w-full">
-              <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿De dónde salió el dinero?</label>
-              <select value={origen} onChange={e => setOrigen(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
-                <option value="Caja Negocio">Caja Fuerte (Dinero del Taller)</option>
-                <option value="Emanuel">Inversión de Emanuel (Bolsillo)</option>
-                <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
-              </select>
-            </div>
-          )}
-          <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
-          <button onClick={guardarMovimiento} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Registrar en Caja</button>
-        </div>
-
-        <div className="glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg bg-[#111]">
-          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Estado del Negocio</h3>
-          <div className="space-y-3 mb-6">
-            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Emanuel</span><span className="font-black text-white">${deudaE.toLocaleString('es-AR')}</span></div>
-            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Gonzalo</span><span className="font-black text-white">${deudaG.toLocaleString('es-AR')}</span></div>
-          </div>
-          <div className="border-t border-[#222] pt-4">
-            <span className="text-[10px] text-[#e2ff00] uppercase font-black tracking-widest mb-2 block flex items-center gap-1"><IconWallet /> Caja Exclusiva del Taller (Fondo)</span>
-            <span className="text-3xl font-black text-[#e2ff00] block mb-2">${fondoTaller.toLocaleString('es-AR')}</span>
-            <p className="text-[8px] text-gray-500 uppercase tracking-widest leading-relaxed mt-2">Este fondo acumula el 40% de los nuevos ingresos y se descuenta al registrar Gastos pagados con la "Caja Fuerte".</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full md:w-[55%] lg:w-[60%] space-y-3">
-        {listInversa.map((f, i) => (
-          <div key={f.id} className="glass-panel p-5 rounded-2xl flex justify-between items-center border border-[#333]">
-            <div className="flex-1 pr-4">
-              <p className="font-bold text-white text-base mb-1">{f.concepto}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[9px] uppercase tracking-widest text-gray-500">{new Date(f.fecha).toLocaleDateString()}</span>
-                {f.tipo === 'Gasto' && f.origen && f.origen !== 'Caja Negocio' && <span className="text-[8px] bg-[#e2ff00]/20 text-[#e2ff00] px-2 py-0.5 rounded uppercase font-bold ml-1">Pagó: {f.origen}</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`font-black text-xl ${f.tipo === 'Ingreso' ? 'text-green-400' : 'text-red-400'}`}>{f.tipo === 'Ingreso' ? '+' : '-'}${Number(f.monto).toLocaleString('es-AR')}</span>
-              <button onClick={() => eliminarMov(f.id)} className="text-gray-400 hover:text-red-500 p-1 ml-2"><IconTrash /></button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// --- VISTA PRESUPUESTO (RESTAURADO COMPLETO + FUNCIONES PREMIUM) ---
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
-  
-  // ¡¡¡¡ MUY IMPORTANTE !!!! Pegá tu URL de la web app de Google Apps Script aquí:
   const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
   
-  const COSTOS_EXPRESS = { 
-    gananciaPorPlaca: 10000, 
-    costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, 
-    valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, 
-    instalacionBasica: 25000, instalacionAltura: 55000 
-  };
-  
-  const COSTOS_BETA = { 
-    gananciaPorPlaca: 15000, 
-    costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, 
-    precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, 
-    fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, 
-    fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 
-  };
-  
+  const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
+  const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
   const AREA_PLACA = 0.72;
 
-  // --- ESTADOS EXPRESS ---
-  const [crAncho, setCrAncho] = useState(''); 
-  const [crAlto, setCrAlto] = useState(''); 
-  const [crDensidad, setCrDensidad] = useState('40'); 
-  const [crComplejidad, setCrComplejidad] = useState('3'); 
-  const [crExterior, setCrExterior] = useState('No'); 
-  const [crLeds, setCrLeds] = useState('No'); 
-  const [crInstalacion, setCrInstalacion] = useState('Sin colocación');
-  const [crEspesorFrente, setCrEspesorFrente] = useState('20mm');
-  const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno');
-  const [precioAjustado, setPrecioAjustado] = useState(0);
-  const [descargandoExpress, setDescargandoExpress] = useState(false);
+  // ESTADOS EXPRESS
+  const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
 
   const m2Totales = (Number(crAncho) * Number(crAlto)) || 0; 
-  let placasEstimadasFrente = 0;
-  if (m2Totales > 0) {
-    if (crDensidad === '100') {
-      const op1 = Math.ceil(Number(crAncho) / 1.20) * Math.ceil(Number(crAlto) / 0.60);
-      const op2 = Math.ceil(Number(crAncho) / 0.60) * Math.ceil(Number(crAlto) / 1.20);
-      placasEstimadasFrente = Math.min(op1, op2);
-    } else if (crDensidad === '65') {
-      placasEstimadasFrente = Math.ceil((m2Totales * 1.4) / AREA_PLACA);
-    } else {
-      placasEstimadasFrente = Math.ceil((m2Totales * 1.8) / AREA_PLACA);
-    }
-  }
+  let placasEstimadasFrente = m2Totales > 0 ? Math.ceil((m2Totales * (crDensidad === '100' ? 1 : crDensidad === '65' ? 1.4 : 1.8)) / AREA_PLACA) : 0;
+  let costoPlacasRapido = placasEstimadasFrente * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca);
+  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') { costoPlacasRapido += Math.ceil((m2Totales * 1.2) / AREA_PLACA) * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca); }
   
-  let precioPlacaFrenteExpress = COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca;
-  let costoPlacasRapido = placasEstimadasFrente * precioPlacaFrenteExpress;
+  let horasEstimadas = m2Totales * Number(crComplejidad) + (crExterior === 'Si' ? m2Totales * 1.5 : 0) + (crLeds === 'Si' ? m2Totales * 3 : 0) + (crEspesorFondo !== 'Ninguno' ? m2Totales * 1.5 : 0);
+  let subtotalRapido = costoPlacasRapido + (horasEstimadas * COSTOS_EXPRESS.valorHora) + (costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3)) + (crLeds === 'Si' ? (((Number(crAncho) + Number(crAlto)) * 3 * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente + (Math.ceil(m2Totales * 12) * COSTOS_EXPRESS.costoSoporte3D)) : 0) + (crInstalacion === 'Instalación Básica' ? COSTOS_EXPRESS.instalacionBasica : crInstalacion === 'Compleja / Altura' ? COSTOS_EXPRESS.instalacionAltura : 0);
   
-  let placasEstimadasFondo = 0;
-  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') {
-    const op1 = Math.ceil(Number(crAncho) / 1.20) * Math.ceil(Number(crAlto) / 0.60);
-    const op2 = Math.ceil(Number(crAncho) / 0.60) * Math.ceil(Number(crAlto) / 1.20);
-    placasEstimadasFondo = Math.min(op1, op2);
-    let precioPlacaFondoExpress = COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca;
-    costoPlacasRapido += (placasEstimadasFondo * precioPlacaFondoExpress); 
-  }
-  
-  const totalPlacasFisicas = placasEstimadasFrente + placasEstimadasFondo;
-  
-  let horasEstimadas = m2Totales * Number(crComplejidad); 
-  if(crExterior === 'Si') horasEstimadas += m2Totales * 1.5; 
-  if(crLeds === 'Si') horasEstimadas += m2Totales * 3; 
-  if(crEspesorFondo !== 'Ninguno') horasEstimadas += m2Totales * 1.5; 
-  
-  const costoTallerRapido = horasEstimadas * COSTOS_EXPRESS.valorHora;
-  let costoInsumosRapido = costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3);
-  
-  let costoLedTotal = 0; let costo3DTotal = 0;
-  if(crLeds === 'Si') { 
-    const perimetroAprox = (Number(crAncho) + Number(crAlto)) * 2 * 1.5; 
-    costoLedTotal = (perimetroAprox * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente; 
-    const cantSoportes3D = Math.ceil(m2Totales * 12); 
-    costo3DTotal = cantSoportes3D * COSTOS_EXPRESS.costoSoporte3D; 
-  }
-  
-  let costoColocacion = 0; 
-  if(crInstalacion === 'Instalación Básica') costoColocacion = COSTOS_EXPRESS.instalacionBasica; 
-  if(crInstalacion === 'Compleja / Altura') costoColocacion = COSTOS_EXPRESS.instalacionAltura;
-  
-  const subtotalRapido = costoPlacasRapido + costoTallerRapido + costoInsumosRapido + costoLedTotal + costo3DTotal + costoColocacion; 
-  const precioSugeridoRapido = subtotalRapido * 2;
+  useEffect(() => { setPrecioAjustado(subtotalRapido * 2); }, [subtotalRapido]);
 
-  useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
+  // ESTADOS BETA AI
+  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
 
-  const exportarTicketRapido = () => {
-    if(!m2Totales) return showToast("Faltan medidas", "error"); 
-    setDescargandoExpress(true);
-    setTimeout(() => {
-      let ticketHTML = `
-        <div id="ticket-rapido" style="font-family: Arial, sans-serif; padding: 40px; color: #111; width: 450px; background-color: #ffffff; box-sizing: border-box; text-align: center;">
-          <img src="${TICKET_LOGO_URL}" style="max-height: 60px; margin-bottom: 10px;" crossorigin="anonymous" />
-          <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">EXPRESS BUDGETER SYSTEM 3.0</h2>
-          <div style="border-top: 2px dashed #ddd; border-bottom: 2px dashed #ddd; padding: 20px 0; margin-top: 20px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Dimensiones:</span><span style="font-weight: bold;">${crAncho}m x ${crAlto}m</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Frente / Letras:</span><span style="font-weight: bold;">Polyfan ${crEspesorFrente}</span>
-            </div>
-            ${crEspesorFondo !== 'Ninguno' ? `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Fondo / Base:</span><span style="font-weight: bold;">Polyfan ${crEspesorFondo}</span>
-            </div>
-            ` : ''}
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Tratamiento:</span><span style="font-weight: bold;">${crExterior === 'Si' ? 'Apto Exterior' : 'Interior'}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Iluminación:</span><span style="font-weight: bold;">${crLeds === 'Si' ? 'Con LED + Soportes 3D' : 'Sin Luces'}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="color: #666;">Colocación:</span><span style="font-weight: bold;">${crInstalacion}</span>
-            </div>
-          </div>
-          <div style="background: #000; color: #fff; padding: 20px; border-radius: 15px; margin: 25px 0;">
-            <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
-            <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
-          </div>
-          <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
-          <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
-        </div>
-      `;
-      const element = document.createElement('div'); element.innerHTML = ticketHTML; 
-      element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
-      document.body.appendChild(element);
-      
-      window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 450 }).then(canvas => {
-        const link = document.createElement('a'); link.download = `Presupuesto_Express.png`; link.href = canvas.toDataURL('image/png'); link.click();
-        showToast('Ticket generado'); setDescargandoExpress(false); document.body.removeChild(element);
-      });
-    }, 300);
-  };
-
-  const enviarWhatsAppEstimacion = () => {
-    if(!m2Totales) return showToast("Faltan medidas", "error");
-    let textoEspesores = `Polyfan ${crEspesorFrente}`;
-    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
-    let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
-    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(texto), "_blank");
-  };
-
-  // --- ESTADOS BETA ---
-  const [betaCliente, setBetaCliente] = useState('');
-  const [betaTrabajo, setBetaTrabajo] = useState('');
-  const [betaAncho, setBetaAncho] = useState('');
-  const [betaAlto, setBetaAlto] = useState('');
-  const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]);
-  const [betaVinilo, setBetaVinilo] = useState('No');
-  const [betaExterior, setBetaExterior] = useState('No');
-  const [betaLuz, setBetaLuz] = useState('No');
-  const [betaMetrosLed, setBetaMetrosLed] = useState('');
-  const [betaMetrosCable, setBetaMetrosCable] = useState('');
-  const [betaInstalacion, setBetaInstalacion] = useState('Normal');
-  const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles');
-  const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar');
-  const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0);
-  const [betaRespuestaIA, setBetaRespuestaIA] = useState('');
-  const [generandoIA, setGenerandoIA] = useState(false);
-  const [descargandoBeta, setDescargandoBeta] = useState(false);
-
-  const m2Beta = (Number(betaAncho) * Number(betaAlto)) || 0;
-  
   useEffect(() => {
      let cPlacas = betaPlacas.reduce((acc, p) => acc + (Number(p.cantidad) > 0 ? Number(p.cantidad) * (COSTOS_BETA.costoPlacaNeto[p.espesor] + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
      let subB = cPlacas + COSTOS_BETA.fijoPintura + COSTOS_BETA.fijoLuzMaquinas + COSTOS_BETA.fijoManoDeObra + COSTOS_BETA.fijoPegamento + (betaVinilo === 'Si' ? ((Number(betaAncho)*Number(betaAlto)) * COSTOS_BETA.precioViniloM2) : 0) + (betaExterior === 'Si' ? COSTOS_BETA.adicionalExterior : 0) + (betaLuz === 'Si' ? (Number(betaMetrosLed) * COSTOS_BETA.precioMetroLed) + (Number(betaMetrosCable) * COSTOS_BETA.precioMetroCable) + COSTOS_BETA.fijoSoportes3D + COSTOS_BETA.fijoFuenteLuz : 0) + (betaInstalacion === 'Altura' ? COSTOS_BETA.instalacionAltura : betaInstalacion === 'Normal' ? COSTOS_BETA.instalacionNormal : 0);
