@@ -47,6 +47,7 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
+// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -137,7 +138,6 @@ function App() {
 
         <div key={activeTab} className="animate-premium">
           {activeTab === 'dashboard' && <DashboardView finanzas={finanzas} pedidos={pedidos} inventario={inventario} prospectos={prospectos} setActiveTab={setActiveTab} />}
-          {/* CRÍTICO: Aquí enviamos inventario a todos los componentes que lo necesitan */}
           {activeTab === 'pedidos' && <PedidosView pedidos={pedidos} inventario={inventario} loggedUser={loggedUser} showToast={showToast} pedidoToEdit={pedidoToEdit} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
@@ -344,7 +344,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -396,6 +395,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const [idInsumo, setIdInsumo] = useState('');
   const [cantidadInsumo, setCantidadInsumo] = useState('');
   const [editId, setEditId] = useState(null);
+  const [filtroCaja, setFiltroCaja] = useState('Todos');
 
   const limpiarForm = () => { 
       setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); 
@@ -432,6 +432,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   };
 
   const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
+  
   const cargarParaEditar = (f) => { 
       setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); 
       setGastoCategoria(f.categoriaGasto || 'Otros'); setIdInsumo(f.idInsumo || ''); setCantidadInsumo(f.cantidadInsumo || '');
@@ -447,15 +448,15 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   };
 
   const safeFinanzas = finanzas || [];
-  const safeInventario = inventario || []; // <-- PROTECCIÓN ANTI CRASH
+  const safeInventario = inventario || []; // PROTECCIÓN ANTI CRASH
 
   // FECHA DE CORTE Y MATEMATICA RECIENTE (Ignorar viejas deudas)
   const FECHA_CORTE = new Date("2026-09-17T14:00:00").getTime();
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
-  
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
   const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  
   listOrdenada.forEach(f => {
       const isNew = new Date(f.fecha).getTime() >= FECHA_CORTE;
       const m = Number(f.monto);
@@ -511,7 +512,12 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
-  const listInversa = [...listOrdenada].reverse();
+  // APLICAR FILTRO AL HISTORIAL
+  const listInversa = [...listOrdenada].reverse().filter(f => {
+     if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
+     if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
+     return true;
+  });
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
@@ -538,7 +544,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           )}
 
           {tipo === 'Gasto' && (
-            <React.Fragment>
+            <>
               <div className="space-y-1.5 w-full">
                 <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿Qué tipo de gasto es?</label>
                 <select value={gastoCategoria} onChange={e => setGastoCategoria(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
@@ -570,7 +576,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                   <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
                 </select>
               </div>
-            </React.Fragment>
+            </>
           )}
 
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
@@ -598,6 +604,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
+        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -613,9 +620,16 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
            </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4 pl-2 pr-1 border-b border-[#333]/50 pb-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4 pl-2 pr-1 border-b border-[#333]/50 pb-4 gap-3">
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Historial de Transacciones</h3>
-          <button onClick={exportarCSV} className="text-[9px] uppercase tracking-widest font-bold text-[#e2ff00] bg-[#e2ff00]/10 px-4 py-2 rounded-full border border-[#e2ff00]/20 hover:bg-[#e2ff00]/20 transition-colors">Exportar Excel</button>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-[#111] border border-[#333] rounded-full p-1">
+               <button onClick={() => setFiltroCaja('Todos')} className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-colors ${filtroCaja === 'Todos' ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>Todos</button>
+               <button onClick={() => setFiltroCaja('Ingresos')} className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-colors ${filtroCaja === 'Ingresos' ? 'bg-green-900/40 text-green-400' : 'text-gray-500 hover:text-gray-300'}`}>Ingresos</button>
+               <button onClick={() => setFiltroCaja('Gastos')} className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-colors ${filtroCaja === 'Gastos' ? 'bg-red-900/40 text-red-400' : 'text-gray-500 hover:text-gray-300'}`}>Gastos</button>
+            </div>
+            <button onClick={exportarCSV} className="text-[9px] uppercase tracking-widest font-bold text-[#e2ff00] bg-[#e2ff00]/10 px-4 py-2 rounded-full border border-[#e2ff00]/20 hover:bg-[#e2ff00]/20 transition-colors">Excel</button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -658,7 +672,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           ))}
           {listInversa.length === 0 && (
             <div className="text-center p-10 border-2 border-dashed border-[#333] rounded-[2rem]">
-              <p className="text-gray-600 text-sm font-bold uppercase tracking-widest">Caja vacía.</p>
+              <p className="text-gray-600 text-sm font-bold uppercase tracking-widest">No hay transacciones.</p>
             </div>
           )}
         </div>
@@ -827,7 +841,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
-  const safeInventario = inventario || []; // PROTECCION ANTI CRASH
+  const safeInventario = inventario || []; 
 
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
