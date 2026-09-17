@@ -344,7 +344,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -397,6 +396,9 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const [cantidadInsumo, setCantidadInsumo] = useState('');
   const [editId, setEditId] = useState(null);
   const [filtroCaja, setFiltroCaja] = useState('Todos');
+  
+  // CORRECCIÓN CRÍTICA: La variable de eliminar ahora existe correctamente en memoria
+  const [deleteId, setDeleteId] = useState(null);
 
   const limpiarForm = () => { 
       setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); 
@@ -435,7 +437,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
     }
   };
 
-  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
+  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => { showToast('Eliminado', 'success'); setDeleteId(null); });
   
   const cargarParaEditar = (f) => { 
       setTipo(f.tipo || 'Ingreso'); 
@@ -458,7 +460,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   };
 
   const safeFinanzas = finanzas || [];
-  const safeInventario = inventario || []; // PROTECCIÓN ANTI CRASH
+  const safeInventario = inventario || [];
 
   // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
@@ -468,11 +470,17 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const listOrdenada = [...safeFinanzas].sort((a,b) => {
       const tA = a.fecha ? new Date(a.fecha).getTime() : 0;
       const tB = b.fecha ? new Date(b.fecha).getTime() : 0;
-      return tA - tB;
+      // Si la fecha es inválida, se evita el choque matemático
+      return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
   });
   
   listOrdenada.forEach(f => {
-      const isNew = f.fecha ? new Date(f.fecha).getTime() >= FECHA_CORTE : false;
+      let isNew = false;
+      if (f.fecha) {
+         const t = new Date(f.fecha).getTime();
+         if (!isNaN(t) && t >= FECHA_CORTE) isNew = true;
+      }
+      
       const m = Number(f.monto) || 0;
 
       if (f.tipo === 'Ingreso') {
@@ -596,7 +604,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -1126,6 +1134,7 @@ function InventarioView({ inventario, showToast }) {
   const [unidad, setUnidad] = useState('Unidades'); 
   const [minimoCritico, setMinimoCritico] = useState('2'); 
   const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null); 
 
   const limpiarForm = () => { setNombre(''); setCantidad(''); setCostoUnitario(''); setCategoria('Planchas Polyfan'); setUnidad('Unidades'); setMinimoCritico('2'); setEditId(null); setShowForm(false); };
   
@@ -1136,7 +1145,7 @@ function InventarioView({ inventario, showToast }) {
     else db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
   };
 
-  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
+  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
   const cargarParaEditar = (item) => { setNombre(item.nombre); setCantidad(item.cantidad); setCostoUnitario(item.costoUnitario || ''); setCategoria(item.categoria || 'Planchas Polyfan'); setUnidad(item.unidad || 'Unidades'); setMinimoCritico(item.minimoCritico || '2'); setEditId(item.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
   
@@ -1184,8 +1193,17 @@ function InventarioView({ inventario, showToast }) {
             <div className="flex justify-between items-start mb-4">
               <div className="pr-2"><p className="font-bold text-lg text-white leading-tight">{item.nombre}</p><p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mt-1">{item.categoria}</p></div>
               <div className="flex gap-1.5 items-center">
-                <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
-                <button onClick={() => eliminarItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
+                {deleteId === item.id ? (
+                  <div className="flex gap-1 items-center bg-[#111] border border-[#222] p-1.5 rounded-lg">
+                    <button onClick={() => eliminarItem(item.id)} className="bg-red-600 text-white font-bold text-[9px] px-2 py-1.5 rounded hover:bg-red-500 transition-colors">Confirmar</button>
+                    <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
+                  </div>
+                ) : (
+                  <>
+                    <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                    <button onClick={() => setDeleteId(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
+                  </>
+                )}
               </div>
             </div>
             {Number(item.costoUnitario) > 0 && (
