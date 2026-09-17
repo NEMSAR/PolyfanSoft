@@ -143,7 +143,7 @@ function App() {
           {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
           {activeTab === 'finanzas' && <FinanzasView finanzas={finanzas} loggedUser={loggedUser} showToast={showToast} />}
-          {activeTab === 'presupuesto' && <PresupuestoView showToast={showToast} />}
+          {activeTab === 'presupuesto' && <PresupuestoView showToast={showToast} loggedUser={loggedUser} />}
         </div>
 
         <div className="mt-20 flex flex-col items-center justify-center opacity-30 hover:opacity-100 transition-all duration-500 cursor-default pb-10">
@@ -217,12 +217,11 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const totalPedidos = safePedidos.length; 
   const progresoPedidos = totalPedidos > 0 ? Math.round((pedidosCompletados / totalPedidos) * 100) : 0;
   
-  // FUNCIÓN PREMIUM: Radar de Entregas Urgentes
   const entregasProximas = useMemo(() => {
     return safePedidos
       .filter(p => p.estado !== 'Completado' && p.fechaLimite)
       .sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite))
-      .slice(0, 4); // Muestra solo los 4 más urgentes
+      .slice(0, 4); 
   }, [safePedidos]);
   
   const leadsActivos = safeProspectos.filter(p => p.estado !== 'Frío').length;
@@ -232,7 +231,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   }, 0);
   const stockCritico = safeInventario.filter(i => Number(i.cantidad) <= (Number(i.minimoCritico) || 0));
 
-  // FUNCIÓN PREMIUM: Exportador WhatsApp de Lista de Compras
   const generarListaComprasWhatsApp = () => {
     if (stockCritico.length === 0) return;
     const faltantes = stockCritico.map(i => `- ${i.nombre}: Quedan ${i.cantidad}${formatUnidad(i.unidad)}`).join('\n');
@@ -262,8 +260,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
 
   return (
     <div className="space-y-6 w-full">
-      
-      {/* ALERTA DE STOCK Y LISTA DE COMPRAS INTELIGENTE */}
       {stockCritico.length > 0 && (
         <div className="w-full bg-red-900/20 border-2 border-red-500/50 rounded-[2rem] p-5 md:p-6 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-red-500/20 pb-4">
@@ -349,7 +345,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -762,7 +757,7 @@ function InventarioView({ inventario, showToast }) {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <Input type="number" label="Cant. Real" value={cantidad} onChange={setCantidad} />
-              <Input type="number" label="Umbral Alerta (Min)" value={minimoCritico} onChange={setMinimoCritico} />
+              <Input type="number" label="Alerta Min." value={minimoCritico} onChange={setMinimoCritico} />
               <Input type="number" label="Costo U. ($)" value={costoUnitario} onChange={setCostoUnitario} />
             </div>
             <button onClick={guardarItem} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Guardar Insumo</button>
@@ -910,112 +905,531 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
   );
 }
 
-function PresupuestoView({ showToast }) {
+// --- VISTA PRESUPUESTO (RESTAURADO COMPLETO + FUNCIONES PREMIUM) ---
+function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
   
   // ¡¡¡¡ MUY IMPORTANTE !!!! Pegá tu URL de la web app de Google Apps Script aquí:
   const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
   
-  const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
-  const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
+  const COSTOS_EXPRESS = { 
+    gananciaPorPlaca: 10000, 
+    costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, 
+    valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, 
+    instalacionBasica: 25000, instalacionAltura: 55000 
+  };
+  
+  const COSTOS_BETA = { 
+    gananciaPorPlaca: 15000, 
+    costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, 
+    precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, 
+    fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, 
+    fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 
+  };
+  
   const AREA_PLACA = 0.72;
 
-  // ESTADOS EXPRESS
-  const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
+  // --- ESTADOS EXPRESS ---
+  const [crAncho, setCrAncho] = useState(''); 
+  const [crAlto, setCrAlto] = useState(''); 
+  const [crDensidad, setCrDensidad] = useState('40'); 
+  const [crComplejidad, setCrComplejidad] = useState('3'); 
+  const [crExterior, setCrExterior] = useState('No'); 
+  const [crLeds, setCrLeds] = useState('No'); 
+  const [crInstalacion, setCrInstalacion] = useState('Sin colocación');
+  const [crEspesorFrente, setCrEspesorFrente] = useState('20mm');
+  const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno');
+  const [precioAjustado, setPrecioAjustado] = useState(0);
+  const [descargandoExpress, setDescargandoExpress] = useState(false);
 
   const m2Totales = (Number(crAncho) * Number(crAlto)) || 0; 
-  let placasEstimadasFrente = m2Totales > 0 ? Math.ceil((m2Totales * (crDensidad === '100' ? 1 : crDensidad === '65' ? 1.4 : 1.8)) / AREA_PLACA) : 0;
-  let costoPlacasRapido = placasEstimadasFrente * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca);
-  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') { costoPlacasRapido += Math.ceil((m2Totales * 1.2) / AREA_PLACA) * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca); }
+  let placasEstimadasFrente = 0;
+  if (m2Totales > 0) {
+    if (crDensidad === '100') {
+      const op1 = Math.ceil(Number(crAncho) / 1.20) * Math.ceil(Number(crAlto) / 0.60);
+      const op2 = Math.ceil(Number(crAncho) / 0.60) * Math.ceil(Number(crAlto) / 1.20);
+      placasEstimadasFrente = Math.min(op1, op2);
+    } else if (crDensidad === '65') {
+      placasEstimadasFrente = Math.ceil((m2Totales * 1.4) / AREA_PLACA);
+    } else {
+      placasEstimadasFrente = Math.ceil((m2Totales * 1.8) / AREA_PLACA);
+    }
+  }
   
-  let horasEstimadas = m2Totales * Number(crComplejidad) + (crExterior === 'Si' ? m2Totales * 1.5 : 0) + (crLeds === 'Si' ? m2Totales * 3 : 0) + (crEspesorFondo !== 'Ninguno' ? m2Totales * 1.5 : 0);
-  let subtotalRapido = costoPlacasRapido + (horasEstimadas * COSTOS_EXPRESS.valorHora) + (costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3)) + (crLeds === 'Si' ? (((Number(crAncho) + Number(crAlto)) * 3 * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente + (Math.ceil(m2Totales * 12) * COSTOS_EXPRESS.costoSoporte3D)) : 0) + (crInstalacion === 'Instalación Básica' ? COSTOS_EXPRESS.instalacionBasica : crInstalacion === 'Compleja / Altura' ? COSTOS_EXPRESS.instalacionAltura : 0);
+  let precioPlacaFrenteExpress = COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca;
+  let costoPlacasRapido = placasEstimadasFrente * precioPlacaFrenteExpress;
   
-  useEffect(() => { setPrecioAjustado(subtotalRapido * 2); }, [subtotalRapido]);
+  let placasEstimadasFondo = 0;
+  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') {
+    const op1 = Math.ceil(Number(crAncho) / 1.20) * Math.ceil(Number(crAlto) / 0.60);
+    const op2 = Math.ceil(Number(crAncho) / 0.60) * Math.ceil(Number(crAlto) / 1.20);
+    placasEstimadasFondo = Math.min(op1, op2);
+    let precioPlacaFondoExpress = COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca;
+    costoPlacasRapido += (placasEstimadasFondo * precioPlacaFondoExpress); 
+  }
+  
+  const totalPlacasFisicas = placasEstimadasFrente + placasEstimadasFondo;
+  
+  let horasEstimadas = m2Totales * Number(crComplejidad); 
+  if(crExterior === 'Si') horasEstimadas += m2Totales * 1.5; 
+  if(crLeds === 'Si') horasEstimadas += m2Totales * 3; 
+  if(crEspesorFondo !== 'Ninguno') horasEstimadas += m2Totales * 1.5; 
+  
+  const costoTallerRapido = horasEstimadas * COSTOS_EXPRESS.valorHora;
+  let costoInsumosRapido = costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3);
+  
+  let costoLedTotal = 0; let costo3DTotal = 0;
+  if(crLeds === 'Si') { 
+    const perimetroAprox = (Number(crAncho) + Number(crAlto)) * 2 * 1.5; 
+    costoLedTotal = (perimetroAprox * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente; 
+    const cantSoportes3D = Math.ceil(m2Totales * 12); 
+    costo3DTotal = cantSoportes3D * COSTOS_EXPRESS.costoSoporte3D; 
+  }
+  
+  let costoColocacion = 0; 
+  if(crInstalacion === 'Instalación Básica') costoColocacion = COSTOS_EXPRESS.instalacionBasica; 
+  if(crInstalacion === 'Compleja / Altura') costoColocacion = COSTOS_EXPRESS.instalacionAltura;
+  
+  const subtotalRapido = costoPlacasRapido + costoTallerRapido + costoInsumosRapido + costoLedTotal + costo3DTotal + costoColocacion; 
+  const precioSugeridoRapido = subtotalRapido * 2;
 
-  // ESTADOS BETA AI
-  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
+  useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
 
+  const exportarTicketRapido = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error"); 
+    setDescargandoExpress(true);
+    setTimeout(() => {
+      let ticketHTML = `
+        <div id="ticket-rapido" style="font-family: Arial, sans-serif; padding: 40px; color: #111; width: 450px; background-color: #ffffff; box-sizing: border-box; text-align: center;">
+          <img src="${TICKET_LOGO_URL}" style="max-height: 60px; margin-bottom: 10px;" crossorigin="anonymous" />
+          <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">EXPRESS BUDGETER SYSTEM 3.0</h2>
+          <div style="border-top: 2px dashed #ddd; border-bottom: 2px dashed #ddd; padding: 20px 0; margin-top: 20px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Dimensiones:</span><span style="font-weight: bold;">${crAncho}m x ${crAlto}m</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Frente / Letras:</span><span style="font-weight: bold;">Polyfan ${crEspesorFrente}</span>
+            </div>
+            ${crEspesorFondo !== 'Ninguno' ? `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Fondo / Base:</span><span style="font-weight: bold;">Polyfan ${crEspesorFondo}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Tratamiento:</span><span style="font-weight: bold;">${crExterior === 'Si' ? 'Apto Exterior' : 'Interior'}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Iluminación:</span><span style="font-weight: bold;">${crLeds === 'Si' ? 'Con LED + Soportes 3D' : 'Sin Luces'}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #666;">Colocación:</span><span style="font-weight: bold;">${crInstalacion}</span>
+            </div>
+          </div>
+          <div style="background: #000; color: #fff; padding: 20px; border-radius: 15px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
+            <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
+          </div>
+          <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
+          <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
+        </div>
+      `;
+      const element = document.createElement('div'); element.innerHTML = ticketHTML; 
+      element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
+      document.body.appendChild(element);
+      
+      window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 450 }).then(canvas => {
+        const link = document.createElement('a'); link.download = `Presupuesto_Express.png`; link.href = canvas.toDataURL('image/png'); link.click();
+        showToast('Ticket generado'); setDescargandoExpress(false); document.body.removeChild(element);
+      });
+    }, 300);
+  };
+
+  const enviarWhatsAppEstimacion = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error");
+    let textoEspesores = `Polyfan ${crEspesorFrente}`;
+    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
+    let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(texto), "_blank");
+  };
+
+  // --- ESTADOS BETA ---
+  const [betaCliente, setBetaCliente] = useState('');
+  const [betaTrabajo, setBetaTrabajo] = useState('');
+  const [betaAncho, setBetaAncho] = useState('');
+  const [betaAlto, setBetaAlto] = useState('');
+  const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]);
+  const [betaVinilo, setBetaVinilo] = useState('No');
+  const [betaExterior, setBetaExterior] = useState('No');
+  const [betaLuz, setBetaLuz] = useState('No');
+  const [betaMetrosLed, setBetaMetrosLed] = useState('');
+  const [betaMetrosCable, setBetaMetrosCable] = useState('');
+  const [betaInstalacion, setBetaInstalacion] = useState('Normal');
+  const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles');
+  const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar');
+  const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0);
+  const [betaRespuestaIA, setBetaRespuestaIA] = useState('');
+  const [generandoIA, setGenerandoIA] = useState(false);
+  const [descargandoBeta, setDescargandoBeta] = useState(false);
+
+  const m2Beta = (Number(betaAncho) * Number(betaAlto)) || 0;
+  
   useEffect(() => {
      let cPlacas = betaPlacas.reduce((acc, p) => acc + (Number(p.cantidad) > 0 ? Number(p.cantidad) * (COSTOS_BETA.costoPlacaNeto[p.espesor] + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
      let subB = cPlacas + COSTOS_BETA.fijoPintura + COSTOS_BETA.fijoLuzMaquinas + COSTOS_BETA.fijoManoDeObra + COSTOS_BETA.fijoPegamento + (betaVinilo === 'Si' ? ((Number(betaAncho)*Number(betaAlto)) * COSTOS_BETA.precioViniloM2) : 0) + (betaExterior === 'Si' ? COSTOS_BETA.adicionalExterior : 0) + (betaLuz === 'Si' ? (Number(betaMetrosLed) * COSTOS_BETA.precioMetroLed) + (Number(betaMetrosCable) * COSTOS_BETA.precioMetroCable) + COSTOS_BETA.fijoSoportes3D + COSTOS_BETA.fijoFuenteLuz : 0) + (betaInstalacion === 'Altura' ? COSTOS_BETA.instalacionAltura : betaInstalacion === 'Normal' ? COSTOS_BETA.instalacionNormal : 0);
      setBetaPrecioAjustado(subB);
   }, [betaPlacas, betaAncho, betaAlto, betaVinilo, betaExterior, betaLuz, betaMetrosLed, betaMetrosCable, betaInstalacion]);
 
+  const handleAddBetaPlaca = () => setBetaPlacas([...betaPlacas, { id: Date.now(), espesor: '20mm', cantidad: '' }]);
+  const handleRemoveBetaPlaca = (id) => setBetaPlacas(betaPlacas.filter(p => p.id !== id));
+  const handleUpdateBetaPlaca = (id, field, value) => setBetaPlacas(betaPlacas.map(p => p.id === id ? { ...p, [field]: value } : p));
+
   const generarPropuestaIA = () => {
-    if(!betaCliente || !betaAncho) return showToast("Faltan datos básicos", "error");
-    setGenerandoIA(true);
-    const promptText = `Cliente: ${betaCliente}\nMedidas: ${betaAncho}x${betaAlto}\nTrabajo: ${betaTrabajo}\nExterior: ${betaExterior}\nLuz LED: ${betaLuz}`;
-    
-    // Conexión segura al Backend de Apps Script
-    fetch(URL_BACKEND_GAS, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada"); }
-      else { showToast("Error IA: " + data.error, "error"); }
-      setGenerandoIA(false);
-    }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
+     const placasValidas = betaPlacas.filter(p => Number(p.cantidad) > 0);
+     if(!betaCliente || !betaTrabajo || placasValidas.length === 0 || !betaAncho || !betaAlto) {
+         return showToast("Completá cliente, trabajo, medidas y al menos 1 placa", "error");
+     }
+     
+     setGenerandoIA(true);
+     const detallePlacasIA = placasValidas.map(p => p.cantidad + " placa/s de Polyfan de " + p.espesor).join(' + ');
+     
+     const promptText = "Cliente: " + betaCliente + "\n" +
+     "Trabajo: " + betaTrabajo + "\n" +
+     "Medidas: " + betaAncho + "m (ancho) x " + betaAlto + "m (alto).\n" +
+     "Material corpóreo: " + detallePlacasIA + ".\n" +
+     "Preparación para exterior: " + betaExterior + ".\n" +
+     "Lleva Vinilo impreso de alta calidad: " + betaVinilo + ".\n" +
+     "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? " (SÍ LLEVA: Incluye " + betaMetrosLed + "m de tira LED, " + betaMetrosCable + "m de cable cristal, soportes 3D y fuente)" : " (NO LLEVA LUZ)") + ".\n" +
+     "Nivel de Instalación: " + betaInstalacion + ".";
+
+     fetch(URL_BACKEND_GAS, {
+       method: "POST",
+       headers: { "Content-Type": "text/plain;charset=utf-8" },
+       body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
+     })
+     .then(res => res.json())
+     .then(data => {
+       if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada"); }
+       else { showToast("Error IA: " + data.error, "error"); }
+       setGenerandoIA(false);
+     }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
+  };
+
+  const exportarTicketBeta = () => {
+    if(!betaRespuestaIA) return showToast("Generá la propuesta primero", "error");
+    setDescargandoBeta(true);
+    setTimeout(() => {
+      let htmlContent = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #111; width: 500px; background-color: #ffffff; box-sizing: border-box; margin: 0; display: block; position: relative;">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <img src="${TICKET_LOGO_URL}?t=${new Date().getTime()}" crossorigin="anonymous" style="max-height: 60px; margin-bottom: 10px;" />
+            <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">PROPUESTA DE PROYECTO</h2>
+          </div>
+          <div style="font-size: 13px; line-height: 1.6; color: #222;">${betaRespuestaIA}</div>
+          <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+            <span style="color: #666;">Tiempo de entrega:</span><span style="font-weight: bold; text-align: right;">${betaTiempo}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+            <span style="color: #666;">Formas de pago:</span><span style="font-weight: bold; text-align: right;">${betaPagos}</span>
+          </div>
+          <div style="background: #000; color: #fff; padding: 25px; border-radius: 15px; margin: 25px 0; text-align: center;">
+            <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
+            <p style="margin: 10px 0 0 0; font-size: 42px; font-weight: 900;">$${Number(betaPrecioAjustado).toLocaleString('es-AR')}</p>
+          </div>
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="font-size: 10px; color: #aaa; margin: 0 0 4px 0;">Sujeto a cambios según diseño y detalles finales</p>
+            <p style="font-size: 11px; color: #666; font-weight: bold; margin: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
+          </div>
+        </div>
+      `;
+      const element = document.createElement('div'); element.innerHTML = htmlContent; 
+      element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
+      document.body.appendChild(element);
+      const posPrevia = window.scrollY; window.scrollTo(0, 0);
+      
+      window.html2canvas(element, { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, windowWidth: 500, backgroundColor: '#ffffff' }).then(canvas => {
+        const link = document.createElement('a'); link.download = `Propuesta_${betaCliente.replace(/\s+/g, '_')}.png`; 
+        link.href = canvas.toDataURL('image/png'); link.click();
+        setDescargandoBeta(false); window.scrollTo(0, posPrevia); document.body.removeChild(element); showToast('¡Imagen descargada!');
+      });
+    }, 800);
+  };
+
+  // FUNCIÓN PREMIUM: Guardar como Lead directo
+  const guardarComoLead = () => {
+    if(!betaCliente || !betaTrabajo) return showToast("Faltan datos del cliente/trabajo", "error");
+    db.collection('prospectos').add({
+      nombre: betaCliente,
+      interes: `Propuesta IA generada: ${betaTrabajo} (${betaAncho}x${betaAlto}m). Precio estimado: $${betaPrecioAjustado}`,
+      estado: 'Caliente',
+      celular: '',
+      fecha: new Date().toISOString(),
+      registradoPor: loggedUser || 'Sistema IA'
+    }).then(() => {
+      showToast('¡Lead guardado en el sistema!', 'success');
+    }).catch(() => showToast('Error al guardar', 'error'));
   };
 
   return (
     <div className="space-y-6 w-full">
+      {descargandoExpress && (
+        <div className="fixed inset-0 z-[99999] bg-[#050505]/95 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-[#333] border-t-[#e2ff00] rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(226,255,0,0.2)]"></div>
+          <h2 className="text-[#e2ff00] text-sm font-black uppercase tracking-[0.3em]">Generando Exportación Express</h2>
+        </div>
+      )}
+      {descargandoBeta && (
+        <div className="fixed inset-0 z-[99999] bg-[#050505]/95 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-[#333] border-t-purple-500 rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(147,51,234,0.2)]"></div>
+          <h2 className="text-purple-400 text-sm font-black uppercase tracking-[0.3em]">Exportando Propuesta Beta</h2>
+        </div>
+      )}
+      {generandoIA && (
+        <div className="fixed inset-0 z-[99999] bg-[#050505]/95 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-[#333] border-t-purple-500 rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(147,51,234,0.2)]"></div>
+          <h2 className="text-purple-400 text-sm font-black uppercase tracking-[0.3em]">IA Analizando y Redactando...</h2>
+        </div>
+      )}
+
       <div className="flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shadow-lg flex-col md:flex-row md:w-3/4 md:mx-auto gap-1">
-        <button onClick={() => setModoCotizador('Rapido')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${modoCotizador === 'Rapido' ? 'bg-[#e2ff00] text-black' : 'text-gray-500'}`}>Express 3.0</button>
-        <button onClick={() => setModoCotizador('Beta')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${modoCotizador === 'Beta' ? 'bg-purple-600 text-white' : 'text-gray-500'}`}>Beta (IA)</button>
+        <button onClick={() => setModoCotizador('Rapido')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center gap-2 ${modoCotizador === 'Rapido' ? 'bg-[#e2ff00] text-black shadow-[0_0_15px_rgba(226,255,0,0.2)]' : 'text-gray-500 hover:text-white'}`}>
+          <IconZap /> Express 3.0
+        </button>
+        <button onClick={() => setModoCotizador('Beta')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center gap-2 ${modoCotizador === 'Beta' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-gray-500 hover:text-white'}`}>
+          <IconSparkles /> Experimental Beta (IA)
+        </button>
       </div>
 
       {modoCotizador === 'Rapido' && (
-         <div className="w-full flex flex-col md:flex-row gap-8 items-start">
-            <div className="w-full md:w-1/2 glass-panel border border-[#333] p-6 rounded-[2rem] space-y-6">
+        <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+          <div className="w-full md:w-1/2 glass-panel border border-[#333] p-6 rounded-[2rem] space-y-6 animate-premium">
+            <div className="text-center md:text-left">
               <h3 className="text-white font-black text-lg uppercase tracking-widest">Calculadora Rápida</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Input type="number" label="Ancho (m)" value={crAncho} onChange={setCrAncho} />
-                <Input type="number" label="Alto (m)" value={crAlto} onChange={setCrAlto} />
+              <p className="text-[10px] text-[#e2ff00] uppercase tracking-widest mt-1">Cálculo Proporcional y Capas Múltiples</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input type="number" label="Ancho (Metros)" value={crAncho} onChange={setCrAncho} placeholder="Ej: 1.70" />
+              <Input type="number" label="Alto (Metros)" value={crAlto} onChange={setCrAlto} placeholder="Ej: 1.50" />
+            </div>
+            
+            <div className="space-y-4 bg-[#0a0a0a]/50 p-5 rounded-2xl border border-[#222]">
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="space-y-1 w-full">
+                  <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">Capa Frente (Letras)</label>
+                  <select value={crEspesorFrente} onChange={e => setCrEspesorFrente(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#e2ff00] appearance-none">
+                    <option value="20mm">Polyfan 20mm</option><option value="30mm">Polyfan 30mm</option>
+                    <option value="40mm">Polyfan 40mm</option><option value="50mm">Polyfan 50mm</option>
+                  </select>
+                </div>
+                <div className="space-y-1 w-full">
+                  <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">Capa Fondo (Base)</label>
+                  <select value={crEspesorFondo} onChange={e => setCrEspesorFondo(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#e2ff00] appearance-none">
+                    <option value="Ninguno">Sin Fondo</option><option value="20mm">Polyfan 20mm</option>
+                    <option value="30mm">Polyfan 30mm</option><option value="40mm">Polyfan 40mm</option>
+                    <option value="50mm">Polyfan 50mm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3 w-full border-t border-[#222] pt-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">Condiciones</label>
+                  <select value={crExterior} onChange={e => setCrExterior(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#e2ff00] appearance-none">
+                    <option value="No">Para Interior</option><option value="Si">Para Exterior (Laca + Masilla)</option>
+                  </select>
+                </div>
+                <select value={crLeds} onChange={e => setCrLeds(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none appearance-none">
+                  <option value="No">Sin Luces</option><option value="Si">Con Retroiluminación LED (Inlc. 3D)</option>
+                </select>
+                <select value={crInstalacion} onChange={e => setCrInstalacion(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none appearance-none">
+                  <option value="Sin colocación">Sin Colocación</option><option value="Instalación Básica">Instalación Básica</option><option value="Compleja / Altura">Instalación Altura / Compleja</option>
+                </select>
               </div>
               <div className="space-y-3 pt-4 border-t border-[#222]">
-                 <select value={crEspesorFrente} onChange={e => setCrEspesorFrente(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="20mm">Polyfan 20mm</option><option value="30mm">Polyfan 30mm</option></select>
-                 <select value={crExterior} onChange={e => setCrExterior(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="No">Interior</option><option value="Si">Exterior</option></select>
-                 <select value={crLeds} onChange={e => setCrLeds(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="No">Sin Luces</option><option value="Si">Con Luz LED</option></select>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">Diseño (Capa Frente)</label>
+                  <select value={crDensidad} onChange={e => setCrDensidad(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none appearance-none">
+                    <option value="40">Texto Suelto (Alta Merma)</option><option value="65">Logo Estándar (Merma Media)</option><option value="100">Frente Pleno / Escudo (Sin Merma)</option>
+                  </select>
+                </div>
+                <select value={crComplejidad} onChange={e => setCrComplejidad(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none appearance-none">
+                  <option value="1.5">Baja (1.5h/m²)</option><option value="3">Normal (3h/m²)</option><option value="5">Alta (5h/m²)</option>
+                </select>
               </div>
             </div>
-            <div className="w-full md:w-1/2 bg-[#111] rounded-2xl border border-[#333] overflow-hidden p-6">
-               <span className="text-gray-400 text-sm font-bold mt-2">PRECIO FINAL:</span> 
-               <div className="flex items-center mt-2">
-                 <span className="text-[#e2ff00] text-3xl font-black mr-2">$</span>
-                 <input type="number" value={precioAjustado} onChange={(e) => setPrecioAjustado(e.target.value)} className="bg-transparent border-b border-[#333] focus:border-[#e2ff00] text-[#e2ff00] text-4xl font-black w-48 outline-none text-right" />
-               </div>
-            </div>
-         </div>
+          </div>
+
+          <div className="w-full md:w-1/2">
+            {m2Totales > 0 ? (
+              <div className="bg-[#111] rounded-2xl border border-[#333] overflow-hidden animate-pop shadow-[0_10px_40px_rgba(0,0,0,0.5)] md:sticky md:top-10">
+                <div className="bg-[#e2ff00] p-4 text-center">
+                  <p className="text-black font-black uppercase tracking-widest text-[11px]">Cálculo Matemático</p>
+                </div>
+                <div className="p-6 md:p-8 space-y-4 text-sm">
+                  <div className="flex justify-between border-b border-[#222] pb-3">
+                    <span className="text-gray-400">Placas Frente:</span> 
+                    <span className="text-white font-bold">{placasEstimadasFrente} (de {crEspesorFrente})</span>
+                  </div>
+                  {crEspesorFondo !== 'Ninguno' && (
+                    <div className="flex justify-between border-b border-[#222] pb-3">
+                      <span className="text-gray-400">Placas Fondo:</span> 
+                      <span className="text-white font-bold">{placasEstimadasFondo} (de {crEspesorFondo})</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center pt-4">
+                    <span className="text-gray-400 text-sm md:text-base font-bold mt-2">PRECIO FINAL:</span> 
+                    <div className="flex items-center">
+                      <span className="text-[#e2ff00] text-3xl md:text-4xl font-black mr-2">$</span>
+                      <input type="number" value={precioAjustado} onChange={(e) => setPrecioAjustado(e.target.value)} className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-[#e2ff00] text-[#e2ff00] text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors" />
+                    </div>
+                  </div>
+                  
+                </div>
+                <div className="p-4 md:p-6 bg-[#0a0a0a] flex flex-col gap-3">
+                  <button onClick={exportarTicketRapido} className="w-full bg-[#333] text-white text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#444] transition-all">
+                    <IconImage /> Exportar Ticket PNG
+                  </button>
+                  <button onClick={enviarWhatsAppEstimacion} className="w-full bg-[#1a2e1a] text-green-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 border border-green-900/50 hover:bg-[#203a20] transition-all">
+                    <IconWhatsApp /> Enviar Estimación
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden md:flex h-full min-h-[400px] border-2 border-dashed border-[#333] rounded-[2rem] flex-col items-center justify-center text-gray-600">
+                <IconZap size={48} className="mb-4 opacity-50" />
+                <p className="text-sm font-bold uppercase tracking-widest text-center px-8">Completá las medidas para<br/>ver el cálculo inteligente.</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {modoCotizador === 'Beta' && (
-         <div className="w-full flex flex-col md:flex-row gap-8 items-start">
-            <div className="w-full md:w-[45%] glass-panel border border-purple-500/50 p-6 rounded-[2rem] space-y-4">
-              <h3 className="text-white font-black text-lg uppercase tracking-widest"><IconSparkles /> Motor IA</h3>
-              <Input label="Cliente" value={betaCliente} onChange={setBetaCliente} />
-              <Input label="Trabajo" value={betaTrabajo} onChange={setBetaTrabajo} />
-              <div className="grid grid-cols-2 gap-4">
-                <Input type="number" label="Ancho (m)" value={betaAncho} onChange={setBetaAncho} />
-                <Input type="number" label="Alto (m)" value={betaAlto} onChange={setBetaAlto} />
+        <div className="w-full flex flex-col md:flex-row gap-8 items-start animate-stagger">
+          <div className="w-full md:w-[45%] space-y-6">
+            <div className="glass-panel border border-purple-500/50 p-6 md:p-8 rounded-[2rem] space-y-4 shadow-[0_0_25px_rgba(147,51,234,0.15)] relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
+              
+              <div className="text-center md:text-left mb-6">
+                <h3 className="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2">
+                  <IconSparkles /> Motor IA
+                </h3>
+                <p className="text-[10px] text-purple-400 uppercase tracking-widest mt-1">Cálculo Base Fija + Inteligencia Artificial</p>
               </div>
-              <button onClick={generarPropuestaIA} disabled={generandoIA} className="w-full bg-purple-600 text-white font-black uppercase py-4 rounded-xl mt-4">{generandoIA ? 'Pensando...' : 'Generar Propuesta IA'}</button>
+
+              <Input label="Nombre del Cliente" value={betaCliente} onChange={setBetaCliente} placeholder="Ej: Tienda Arena" />
+              <Input label="Detalle Breve del Trabajo" value={betaTrabajo} onChange={setBetaTrabajo} placeholder="Ej: Corpóreo iluminado para fachada" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Input type="number" label="Ancho (Metros)" value={betaAncho} onChange={setBetaAncho} placeholder="Ej: 1.70" />
+                <Input type="number" label="Alto (Metros)" value={betaAlto} onChange={setBetaAlto} placeholder="Ej: 1.50" />
+              </div>
+              
+              <div className="space-y-3 bg-[#0a0a0a]/50 p-4 rounded-xl border border-[#222]">
+                <div className="flex justify-between items-center mb-2">
+                    <label className="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Placas a Utilizar</label>
+                    <button onClick={handleAddBetaPlaca} className="text-[9px] bg-purple-600/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full hover:bg-purple-600 hover:text-white transition-colors">
+                        + Agregar otra placa
+                    </button>
+                </div>
+                {betaPlacas.map((placa, idx) => (
+                    <div key={placa.id} className="flex gap-2 items-center">
+                        <select value={placa.espesor} onChange={e => handleUpdateBetaPlaca(placa.id, 'espesor', e.target.value)} className="flex-1 glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500 appearance-none">
+                            <option value="20mm">Polyfan 20mm</option><option value="30mm">Polyfan 30mm</option>
+                            <option value="40mm">Polyfan 40mm</option><option value="50mm">Polyfan 50mm</option>
+                        </select>
+                        <input type="number" value={placa.cantidad} onChange={e => handleUpdateBetaPlaca(placa.id, 'cantidad', e.target.value)} placeholder="Cant." className="w-20 glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500 text-center" />
+                        {betaPlacas.length > 1 && (
+                            <button onClick={() => handleRemoveBetaPlaca(placa.id)} className="w-8 h-8 flex items-center justify-center bg-red-900/20 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors">X</button>
+                        )}
+                    </div>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1 w-full">
+                  <label className="text-[9px] text-purple-400 uppercase font-bold tracking-widest ml-1">Exterior (Laca/Masilla)</label>
+                  <select value={betaExterior} onChange={e => setBetaExterior(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-purple-500 appearance-none">
+                    <option value="No">No (Interior)</option><option value="Si">Sí (Exterior)</option>
+                  </select>
+                </div>
+                <div className="space-y-1 w-full">
+                  <label className="text-[9px] text-purple-400 uppercase font-bold tracking-widest ml-1">Lleva Vinilo Impreso</label>
+                  <select value={betaVinilo} onChange={e => setBetaVinilo(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-purple-500 appearance-none">
+                    <option value="No">No</option><option value="Si">Sí ($55k x m²)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="space-y-1 w-full">
+                <label className="text-[9px] text-purple-400 uppercase font-bold tracking-widest ml-1">Lleva Luz LED</label>
+                <select value={betaLuz} onChange={e => setBetaLuz(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-purple-500 appearance-none">
+                  <option value="No">No</option><option value="Si">Sí</option>
+                </select>
+              </div>
+              
+              {betaLuz === 'Si' && (
+                <div className="grid grid-cols-2 gap-4 animate-premium">
+                  <Input type="number" label="Metros de Tira LED" value={betaMetrosLed} onChange={setBetaMetrosLed} placeholder="Ej: 5" />
+                  <Input type="number" label="Metros de Cable Cristal" value={betaMetrosCable} onChange={setBetaMetrosCable} placeholder="Ej: 3" />
+                </div>
+              )}
+
+              <div className="space-y-1 w-full">
+                <label className="text-[9px] text-purple-400 uppercase font-bold tracking-widest ml-1">Nivel de Instalación</label>
+                <select value={betaInstalacion} onChange={e => setBetaInstalacion(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-purple-500 appearance-none">
+                  <option value="Sin colocación">Sin Colocación</option><option value="Normal">Instalación Normal</option><option value="Altura">Instalación en Altura</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Tiempo Estimado" value={betaTiempo} onChange={setBetaTiempo} placeholder="10 a 15 días" />
+                <Input label="Formas de Pago" value={betaPagos} onChange={setBetaPagos} placeholder="50% anticipo" />
+              </div>
+              
+              <div className="flex justify-between items-center pt-4 border-t border-[#222]">
+                <span className="text-gray-400 text-sm md:text-base font-bold mt-2">PRECIO FINAL:</span> 
+                <div className="flex items-center">
+                  <span className="text-purple-400 text-3xl md:text-4xl font-black mr-2">$</span>
+                  <input type="number" value={betaPrecioAjustado} onChange={(e) => setBetaPrecioAjustado(e.target.value)} className="bg-transparent border-b-2 border-dashed border-[#333] focus:border-purple-500 text-purple-400 text-3xl md:text-4xl font-black w-32 md:w-48 outline-none text-right transition-colors" />
+                </div>
+              </div>
+              
+              <button onClick={generarPropuestaIA} disabled={generandoIA} className="w-full bg-purple-600 text-white font-black uppercase py-4 rounded-xl mt-4 hover:scale-[1.02] transition-all flex justify-center items-center gap-2">
+                <IconSparkles /> {generandoIA ? 'Procesando...' : 'Calcular y Generar Propuesta IA'}
+              </button>
             </div>
-            <div className="w-full md:w-[55%]">
-               {betaRespuestaIA ? (
-                 <div className="glass-panel border border-[#333] p-8 rounded-[2rem]">
-                    <div className="text-purple-400 text-2xl font-black mb-4">${Number(betaPrecioAjustado).toLocaleString('es-AR')}</div>
-                    <div className="text-gray-300 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: betaRespuestaIA }} />
+          </div>
+          
+          <div className="w-full md:w-[55%]">
+            {betaRespuestaIA ? (
+              <div className="glass-panel border border-[#333] p-8 rounded-[2rem] relative overflow-hidden animate-pop shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                 <div className="absolute top-0 right-0 bg-purple-600 text-white text-[8px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-xl">BETA AI POWERED</div>
+                 <div className="flex justify-between items-center mb-6 border-b border-[#222] pb-4">
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Propuesta Comercial</span>
+                    <span className="text-purple-400 text-2xl font-black">${Number(betaPrecioAjustado).toLocaleString('es-AR')}</span>
                  </div>
-               ) : (
-                 <p className="text-center text-gray-500 mt-10">Esperando datos...</p>
-               )}
-            </div>
-         </div>
+                 <div className="text-gray-300 text-sm leading-relaxed space-y-4 mb-8" dangerouslySetInnerHTML={{ __html: betaRespuestaIA }} />
+                 <div className="flex flex-col gap-3">
+                   <button onClick={exportarTicketBeta} className="w-full bg-[#111] border border-purple-500/50 text-purple-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-purple-900/20 transition-all">
+                      <IconImage /> Descargar Propuesta en PNG
+                   </button>
+                   <button onClick={guardarComoLead} className="w-full bg-[#1a2e1a] border border-green-500/50 text-green-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#203a20] transition-all">
+                      <IconUsers /> Guardar como Lead Activo
+                   </button>
+                 </div>
+              </div>
+            ) : (
+              <div className="hidden md:flex h-full min-h-[500px] border-2 border-dashed border-[#333] rounded-[2rem] flex-col items-center justify-center text-gray-600">
+                <IconSparkles size={48} className="mb-4 opacity-50 text-purple-900" />
+                <p className="text-sm font-bold uppercase tracking-widest text-center px-8">Completá los datos y dejá que<br/>la IA redacte la propuesta.</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
+
     </div>
   );
 }
