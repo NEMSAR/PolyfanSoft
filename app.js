@@ -1,4 +1,5 @@
 const { useState, useEffect, useMemo, useRef } = React;
+// REGLA CRÍTICA: Traemos la base de datos
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
@@ -202,13 +203,31 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const safeInventario = inventario || [];
   const safeProspectos = prospectos || [];
 
-  const ingresos = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
-  const gastosTotales = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
-  const gastosCaja = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  // FECHA DE CORTE Y MATEMATICA RECIENTE
+  const FECHA_CORTE = new Date("2026-09-17T00:00:00").getTime();
+  let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0;
   
-  const balanceNeto = ingresos - gastosTotales; 
-  const cajaFisica = ingresos - gastosCaja; 
-  
+  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  listOrdenada.forEach(f => {
+      const m = Number(f.monto);
+      if (f.tipo === 'Ingreso') {
+          cajaFisicaGlobal += m;
+          let disp = m;
+          if (deudaE > 0 || deudaG > 0) {
+              let mitad = disp / 2; let pE = Math.min(deudaE, mitad); let pG = Math.min(deudaG, mitad);
+              deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
+              if (disp > 0) {
+                  if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
+                  if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
+              }
+          }
+      } else {
+          if (f.origen === 'Emanuel') deudaE += m;
+          else if (f.origen === 'Gonzalo') deudaG += m;
+          else cajaFisicaGlobal -= m;
+      }
+  });
+
   const pedidosPendientes = safePedidos.filter(p => p.estado === 'Pendiente').length; 
   const pedidosProceso = safePedidos.filter(p => p.estado === 'En Proceso').length;
   const pedidosCompletados = safePedidos.filter(p => p.estado === 'Completado').length;
@@ -236,11 +255,15 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
     window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msj), "_blank");
   };
 
+  const ingresosHistoricos = safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0);
+  const gastosHistoricos = safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0);
+  const balanceNeto = ingresosHistoricos - gastosHistoricos; 
+
   const barChartData = {
     labels: ['Caja Histórica'],
     datasets: [
-      { label: 'Ingresos Brutos', data: [ingresos], backgroundColor: '#e2ff00', borderRadius: 4 },
-      { label: 'Gastos Totales', data: [gastosTotales], backgroundColor: '#ef4444', borderRadius: 4 }
+      { label: 'Ingresos Brutos', data: [ingresosHistoricos], backgroundColor: '#e2ff00', borderRadius: 4 },
+      { label: 'Gastos Totales', data: [gastosHistoricos], backgroundColor: '#ef4444', borderRadius: 4 }
     ]
   };
 
@@ -299,15 +322,15 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
           <div className="flex flex-col md:flex-row justify-between items-center mt-8 pt-6 border-t border-[#333]/50 gap-4">
             <div className="text-center md:text-left w-full md:w-auto">
               <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Total Ingresos</p>
-              <p className="text-lg md:text-xl font-bold text-green-400">${ingresos.toLocaleString('es-AR')}</p>
+              <p className="text-lg md:text-xl font-bold text-green-400">${ingresosHistoricos.toLocaleString('es-AR')}</p>
             </div>
             <div className="text-center bg-[#111] px-5 py-2.5 rounded-xl border border-[#222] w-full md:w-auto">
               <p className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Caja Física (Liquidez)</p>
-              <p className={`text-lg md:text-xl font-bold ${cajaFisica > 0 ? 'text-[#e2ff00]' : 'text-gray-500'}`}>${cajaFisica.toLocaleString('es-AR')}</p>
+              <p className={`text-lg md:text-xl font-bold ${cajaFisicaGlobal > 0 ? 'text-[#e2ff00]' : 'text-gray-500'}`}>${cajaFisicaGlobal.toLocaleString('es-AR')}</p>
             </div>
             <div className="text-center md:text-right w-full md:w-auto">
               <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Gastos Totales</p>
-              <p className="text-lg md:text-xl font-bold text-red-400">${gastosTotales.toLocaleString('es-AR')}</p>
+              <p className="text-lg md:text-xl font-bold text-red-400">${gastosHistoricos.toLocaleString('es-AR')}</p>
             </div>
           </div>
         </div>
@@ -916,31 +939,67 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
   const cargarParaEditar = (f) => { setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); setEditId(f.id); };
   
   const safeFinanzas = finanzas || [];
-  const list = [...safeFinanzas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const FECHA_CORTE = new Date("2026-09-17T00:00:00").getTime();
+  let cajaFisica = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
 
-  const ingresos = safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0);
-  const gastosCaja = safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0);
-  const cajaFisica = ingresos - gastosCaja; 
-  
-  const aporteE = safeFinanzas.filter(f => f.tipo === 'Gasto' && f.origen === 'Emanuel').reduce((a, b) => a + Number(b.monto), 0);
-  const aporteG = safeFinanzas.filter(f => f.tipo === 'Gasto' && f.origen === 'Gonzalo').reduce((a, b) => a + Number(b.monto), 0);
+  const listOrdenada = [...safeFinanzas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
 
-  let fondos = Math.max(0, cajaFisica); 
-  let pagoE = 0; let pagoG = 0;
-  
-  if (fondos > 0) {
-    let mitad = fondos / 2; let reqE = Math.min(aporteE, mitad); let reqG = Math.min(aporteG, mitad);
-    pagoE += reqE; pagoG += reqG; fondos -= (reqE + reqG);
-    if (fondos > 0) {
-      let restoE = Math.min(aporteE - pagoE, fondos); pagoE += restoE; fondos -= restoE;
-      let restoG = Math.min(aporteG - pagoG, fondos); pagoG += restoG; fondos -= restoG;
-    }
+  listOrdenada.forEach(f => {
+      const isNew = new Date(f.fecha).getTime() >= FECHA_CORTE;
+      const m = Number(f.monto);
+
+      if (f.tipo === 'Ingreso') {
+          cajaFisica += m;
+          let disp = m;
+
+          if (deudaE > 0 || deudaG > 0) {
+              let mitad = disp / 2;
+              let pE = Math.min(deudaE, mitad);
+              let pG = Math.min(deudaG, mitad);
+              deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
+              if (disp > 0) {
+                  if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
+                  if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
+              }
+          }
+          if (disp > 0 && isNew) fondoTaller += disp * 0.40;
+      } else {
+          if (f.origen === 'Emanuel') deudaE += m;
+          else if (f.origen === 'Gonzalo') deudaG += m;
+          else {
+              cajaFisica -= m;
+              if (isNew) fondoTaller -= m;
+          }
+      }
+  });
+
+  // SIMULADOR EN TIEMPO REAL
+  let simMonto = Number(monto) || 0;
+  let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
+
+  if (tipo === 'Ingreso' && simMonto > 0) {
+      let tDeudaE = deudaE; let tDeudaG = deudaG;
+      let disp = simMonto;
+
+      if (tDeudaE > 0 || tDeudaG > 0) {
+          let mitad = disp / 2;
+          let pE = Math.min(tDeudaE, mitad); let pG = Math.min(tDeudaG, mitad);
+          simDeudaE += pE; simDeudaG += pG;
+          tDeudaE -= pE; tDeudaG -= pG; disp -= (pE + pG);
+          if (disp > 0) {
+              if (tDeudaE > 0) { let ex = Math.min(tDeudaE, disp); simDeudaE += ex; disp -= ex; }
+              if (tDeudaG > 0) { let ex = Math.min(tDeudaG, disp); simDeudaG += ex; disp -= ex; }
+          }
+      }
+
+      if (disp > 0) {
+          simFondo = disp * 0.40;
+          simDivE = disp * 0.30;
+          simDivG = disp * 0.30;
+      }
   }
-  
-  const gananciaLibre = fondos;
-  const fondoNegocio = gananciaLibre * 0.40;
-  const dividendoE = gananciaLibre * 0.30;
-  const dividendoG = gananciaLibre * 0.30;
+
+  const listInversa = [...listOrdenada].reverse();
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
@@ -952,6 +1011,21 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
             <button onClick={() => setTipo('Gasto')} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest ${tipo === 'Gasto' ? 'bg-[#2e1a1a] text-red-400' : 'text-gray-600'}`}>Gasto</button>
           </div>
           <Input type="number" label="Monto Real ($)" value={monto} onChange={setMonto} />
+          
+          {/* BANNER DINÁMICO DE SIMULACIÓN */}
+          {tipo === 'Ingreso' && simMonto > 0 && (
+            <div className="bg-[#111] p-4 rounded-xl border border-green-900/50 animate-premium">
+              <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconWallet /> Distribución Sugerida de este Ingreso</p>
+              <div className="space-y-2">
+                {simDeudaE > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Emanuel:</span> <span className="text-white">${simDeudaE.toLocaleString('es-AR')}</span></div>}
+                {simDeudaG > 0 && <div className="flex justify-between text-xs"><span className="text-gray-400">Pagar Deuda Gonzalo:</span> <span className="text-white">${simDeudaG.toLocaleString('es-AR')}</span></div>}
+                <div className="flex justify-between text-xs pt-2 border-t border-[#222]"><span className="text-gray-400 font-bold uppercase tracking-wider">Guardar en Taller (40%):</span> <span className="text-[#e2ff00] font-bold">${simFondo.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Emanuel (30%):</span> <span className="text-blue-400 font-bold">${simDivE.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-400 font-bold uppercase tracking-wider">Bolsillo Gonzalo (30%):</span> <span className="text-green-400 font-bold">${simDivG.toLocaleString('es-AR')}</span></div>
+              </div>
+            </div>
+          )}
+
           {tipo === 'Gasto' && (
             <div className="space-y-1.5 w-full">
               <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿De dónde salió el dinero?</label>
@@ -967,23 +1041,21 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
         </div>
 
         <div className="glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg bg-[#111]">
-          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Liquidación Automática</h3>
-          <div className="flex justify-between items-center mb-5"><span className="text-gray-400 text-[10px] uppercase font-bold">Efectivo Físico:</span><span className="font-black text-xl text-white">${cajaFisica.toLocaleString('es-AR')}</span></div>
+          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Estado del Negocio</h3>
           <div className="space-y-3 mb-6">
-            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Recupero Inv. Emanuel</span><span className="font-black text-white">${pagoE.toLocaleString('es-AR')}</span></div>
-            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Recupero Inv. Gonzalo</span><span className="font-black text-white">${pagoG.toLocaleString('es-AR')}</span></div>
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Emanuel</span><span className="font-black text-white">${deudaE.toLocaleString('es-AR')}</span></div>
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Deuda c/ Gonzalo</span><span className="font-black text-white">${deudaG.toLocaleString('es-AR')}</span></div>
           </div>
           <div className="border-t border-[#222] pt-4">
-            <span className="text-[10px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 block">Ganancia Neta: ${gananciaLibre.toLocaleString('es-AR')}</span>
-            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333] mb-2"><span className="text-[10px] text-gray-400 font-bold uppercase">Reserva Negocio (40%)</span><span className="text-sm font-black text-white">${fondoNegocio.toLocaleString('es-AR')}</span></div>
-            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333] mb-2"><span className="text-[10px] text-gray-400 font-bold uppercase">Emanuel (30%)</span><span className="text-sm font-black text-blue-400">${dividendoE.toLocaleString('es-AR')}</span></div>
-            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333]"><span className="text-[10px] text-gray-400 font-bold uppercase">Gonzalo (30%)</span><span className="text-sm font-black text-green-400">${dividendoG.toLocaleString('es-AR')}</span></div>
+            <span className="text-[10px] text-[#e2ff00] uppercase font-black tracking-widest mb-2 block flex items-center gap-1"><IconWallet /> Caja Exclusiva del Taller (Fondo)</span>
+            <span className="text-3xl font-black text-[#e2ff00] block mb-2">${fondoTaller.toLocaleString('es-AR')}</span>
+            <p className="text-[8px] text-gray-500 uppercase tracking-widest leading-relaxed mt-2">Este fondo acumula el 40% de los nuevos ingresos y se descuenta al registrar Gastos pagados con la "Caja Fuerte".</p>
           </div>
         </div>
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-3">
-        {list.map((f, i) => (
+        {listInversa.map((f, i) => (
           <div key={f.id} className="glass-panel p-5 rounded-2xl flex justify-between items-center border border-[#333]">
             <div className="flex-1 pr-4">
               <p className="font-bold text-white text-base mb-1">{f.concepto}</p>
