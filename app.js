@@ -137,6 +137,7 @@ function App() {
 
         <div key={activeTab} className="animate-premium">
           {activeTab === 'dashboard' && <DashboardView finanzas={finanzas} pedidos={pedidos} inventario={inventario} prospectos={prospectos} setActiveTab={setActiveTab} />}
+          {/* CRÍTICO: Aquí enviamos inventario a todos los componentes que lo necesitan */}
           {activeTab === 'pedidos' && <PedidosView pedidos={pedidos} inventario={inventario} loggedUser={loggedUser} showToast={showToast} pedidoToEdit={pedidoToEdit} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
           {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
@@ -446,7 +447,8 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   };
 
   const safeFinanzas = finanzas || [];
-  
+  const safeInventario = inventario || []; // <-- PROTECCIÓN ANTI CRASH
+
   // FECHA DE CORTE Y MATEMATICA RECIENTE (Ignorar viejas deudas)
   const FECHA_CORTE = new Date("2026-09-17T14:00:00").getTime();
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
@@ -536,7 +538,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           )}
 
           {tipo === 'Gasto' && (
-            <>
+            <React.Fragment>
               <div className="space-y-1.5 w-full">
                 <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿Qué tipo de gasto es?</label>
                 <select value={gastoCategoria} onChange={e => setGastoCategoria(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
@@ -552,7 +554,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                    <div className="flex gap-2 mt-2">
                        <select value={idInsumo} onChange={e => setIdInsumo(e.target.value)} className="flex-1 glass-panel bg-[#111] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                            <option value="">Seleccionar del catálogo...</option>
-                           {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                           {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                        </select>
                        <input type="number" value={cantidadInsumo} onChange={e => setCantidadInsumo(e.target.value)} placeholder="Cant." className="w-20 glass-panel bg-[#111] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                    </div>
@@ -568,7 +570,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                   <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
                 </select>
               </div>
-            </>
+            </React.Fragment>
           )}
 
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
@@ -596,7 +598,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
-        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -826,6 +827,8 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
+  const safeInventario = inventario || []; // PROTECCION ANTI CRASH
+
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
     .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
@@ -880,7 +883,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   <div key={i} className="flex gap-2 items-center mb-2">
                       <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                           <option value="">Seleccionar Material...</option>
-                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                          {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                       </select>
                       <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                       <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
