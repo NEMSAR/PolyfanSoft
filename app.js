@@ -1,9 +1,11 @@
 const { useState, useEffect, useMemo, useRef } = React;
+// REGLA CRÍTICA: Traemos la base de datos que se conectó en el archivo anterior
+const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
-const APP_LOGO_URL = "[https://i.imgur.com/YjSvTHr.png](https://i.imgur.com/YjSvTHr.png)"; 
-const TICKET_LOGO_URL = "[https://i.imgur.com/ytru7Zu.png](https://i.imgur.com/ytru7Zu.png)"; 
-const NOVABIT_LOGO_URL = "[https://i.imgur.com/Bh3Dm7l.png](https://i.imgur.com/Bh3Dm7l.png)";
+const APP_LOGO_URL = "https://i.imgur.com/YjSvTHr.png"; 
+const TICKET_LOGO_URL = "https://i.imgur.com/ytru7Zu.png"; 
+const NOVABIT_LOGO_URL = "https://i.imgur.com/Bh3Dm7l.png";
 const PASS_ACCESO = "polyfan2026";
 
 // --- ÍCONOS COMPARTIDOS ---
@@ -44,7 +46,7 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado seguro de gráficos
+// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -63,6 +65,91 @@ function ChartCanvas({ type, data, options, height = 250 }) {
   }, [type, data, options]);
 
   return <div style={{ height: `${height}px`, width: '100%', position: 'relative' }}><canvas ref={canvasRef}></canvas></div>;
+}
+
+// --- COMPONENTE PRINCIPAL APP ---
+function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [loggedUser, setLoggedUser] = useState(null);
+  const [finanzas, setFinanzas] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [inventario, setInventario] = useState([]);
+  const [prospectos, setProspectos] = useState([]); 
+  const [toastMsg, setToastMsg] = useState(null);
+  
+  const [pedidoToEdit, setPedidoToEdit] = useState(null);
+
+  const showToast = (msg, type = 'success') => { 
+    setToastMsg({ msg, type }); 
+    setTimeout(() => setToastMsg(null), 3500); 
+  };
+
+  useEffect(() => {
+    if (!loggedUser || !db) return;
+    const unsubs = [];
+    try {
+      unsubs.push(db.collection('finanzas').onSnapshot(snap => setFinanzas(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      unsubs.push(db.collection('pedidos').onSnapshot(snap => setPedidos(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      unsubs.push(db.collection('inventario').onSnapshot(snap => setInventario(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+      unsubs.push(db.collection('prospectos').onSnapshot(snap => setProspectos(snap.docs.map(d => ({ id: d.id, ...d.data() })))));
+    } catch (error) { console.error("Firebase Error", error); }
+    return () => unsubs.forEach(unsub => unsub());
+  }, [loggedUser]);
+
+  if (!loggedUser) {
+    return <LoginScreen onLogin={setLoggedUser} showToast={showToast} />;
+  }
+
+  return (
+    <div className="pb-32 md:pb-10 flex min-h-screen">
+      {toastMsg && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] animate-toast w-[90%] max-w-sm md:max-w-md">
+          <div className={`glass-panel border px-5 py-3 rounded-2xl flex items-center gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)] ${toastMsg.type === 'error' ? 'bg-red-900/90 border-red-500' : 'bg-[#0a0a0a]/95 border-[#e2ff00]'}`}>
+            <div className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center ${toastMsg.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#e2ff00] text-black'}`}>
+              {toastMsg.type === 'error' ? '!' : <IconCheck />}
+            </div>
+            <p className="font-bold text-sm tracking-wide text-white leading-tight">{toastMsg.msg}</p>
+          </div>
+        </div>
+      )}
+
+      <nav className="fixed bottom-4 md:bottom-auto left-1/2 transform -translate-x-1/2 w-[96%] max-w-lg md:max-w-[85px] md:w-[85px] md:h-auto md:py-8 md:flex-col md:left-6 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 glass-panel rounded-full md:rounded-[2.5rem] z-50 px-2 py-2 flex justify-around md:justify-center md:gap-6 items-center shadow-[0_20px_50px_rgba(0,0,0,0.9)] border border-[#333]/80 bg-[#111]/80 backdrop-blur-2xl">
+        <NavButton icon={<IconHome />} label="Inicio" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+        <NavButton icon={<IconClipboard />} label="Pedidos" active={activeTab === 'pedidos'} onClick={() => setActiveTab('pedidos')} />
+        <NavButton icon={<IconUsers />} label="Leads" active={activeTab === 'prospectos'} onClick={() => setActiveTab('prospectos')} />
+        <NavButton icon={<IconPackage />} label="Stock" active={activeTab === 'inventario'} onClick={() => setActiveTab('inventario')} />
+        <NavButton icon={<IconDollar />} label="Caja" active={activeTab === 'finanzas'} onClick={() => setActiveTab('finanzas')} />
+        <NavButton icon={<IconFileText />} label="Cotizar" active={activeTab === 'presupuesto'} onClick={() => setActiveTab('presupuesto')} />
+      </nav>
+
+      <main className="pt-8 md:pt-10 px-4 md:px-5 max-w-lg md:max-w-5xl lg:max-w-7xl mx-auto w-full md:pl-[120px] transition-all duration-300">
+        <header className="mb-8 animate-premium flex flex-col md:flex-row items-center md:items-end justify-between border-b border-[#333]/50 pb-6">
+          <div className="flex flex-col items-center md:items-start">
+            <img src={APP_LOGO_URL} alt="PolyfanTech" className="h-10 md:h-12 object-contain mb-1 drop-shadow-2xl opacity-90" />
+            <h2 className="text-[#e2ff00] text-[9px] md:text-[11px] font-black uppercase tracking-[0.4em] mt-1 opacity-80 text-center md:text-left">Enterprise Management System</h2>
+          </div>
+          <div className="inline-flex items-center gap-2 glass-panel bg-[#111]/50 border border-[#333] px-5 py-2 rounded-full text-xs text-gray-400 mt-5 md:mt-0">
+            <div className="w-2 h-2 rounded-full bg-[#e2ff00] shadow-[0_0_8px_#e2ff00] animate-pulse"></div>
+            Operador: <strong className="text-white tracking-wide">{loggedUser}</strong>
+          </div>
+        </header>
+
+        <div key={activeTab} className="animate-premium">
+          {activeTab === 'dashboard' && <DashboardView finanzas={finanzas} pedidos={pedidos} inventario={inventario} prospectos={prospectos} />}
+          {activeTab === 'pedidos' && <PedidosView pedidos={pedidos} inventario={inventario} loggedUser={loggedUser} showToast={showToast} pedidoToEdit={pedidoToEdit} setPedidoToEdit={setPedidoToEdit} />}
+          {activeTab === 'prospectos' && <ProspectosView prospectos={prospectos} loggedUser={loggedUser} showToast={showToast} setActiveTab={setActiveTab} setPedidoToEdit={setPedidoToEdit} />}
+          {activeTab === 'inventario' && <InventarioView inventario={inventario} showToast={showToast} />}
+          {activeTab === 'finanzas' && <FinanzasView finanzas={finanzas} loggedUser={loggedUser} showToast={showToast} />}
+          {activeTab === 'presupuesto' && <PresupuestoView showToast={showToast} />}
+        </div>
+
+        <div className="mt-20 flex flex-col items-center justify-center opacity-30 hover:opacity-100 transition-all duration-500 cursor-default pb-10">
+          <p className="text-[8px] uppercase tracking-[0.4em] text-gray-500 mb-3 font-bold">Software de Gestión by</p>
+          <img src={NOVABIT_LOGO_URL} alt="NovaBit Media Agency" className="h-8 object-contain grayscale hover:grayscale-0 transition-all duration-500 hover:scale-110" />
+        </div>
+      </main>
+    </div>
+  );
 }
 
 // --- VISTAS DEL SISTEMA ---
@@ -277,7 +364,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   const [deleteId, setDeleteId] = useState(null); 
 
   useEffect(() => {
-    if (pedidoToEdit && window.db) {
+    if (pedidoToEdit && db) {
        const p = (pedidos || []).find(x => x.id === pedidoToEdit);
        if (p) cargarParaEditar(p);
        setPedidoToEdit(null);
@@ -302,7 +389,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   const procesarDescuentoInventario = () => {
       insumosUsados.forEach(ins => {
           if (ins.idInsumo && Number(ins.cantidad) > 0) {
-             const itemRef = window.db.collection('inventario').doc(ins.idInsumo);
+             const itemRef = db.collection('inventario').doc(ins.idInsumo);
              itemRef.get().then(doc => {
                  if (doc.exists) {
                      const currentCant = Number(doc.data().cantidad) || 0;
@@ -323,10 +410,10 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     };
     
     if (editId) {
-      window.db.collection('pedidos').doc(editId).update(data)
+      db.collection('pedidos').doc(editId).update(data)
         .then(() => { procesarDescuentoInventario(); showToast('Pedido actualizado y stock descontado'); limpiarForm(); })
     } else {
-      window.db.collection('pedidos').add({ ...data, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser })
+      db.collection('pedidos').add({ ...data, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser })
         .then(() => { procesarDescuentoInventario(); showToast('Pedido cargado y stock descontado'); limpiarForm(); })
     }
   };
@@ -334,10 +421,10 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   const actualizarEstado = (id, estadoActual) => {
     const estados = ['Pendiente', 'En Proceso', 'Completado']; 
     const nextEstado = estados[(estados.indexOf(estadoActual) + 1) % estados.length];
-    window.db.collection('pedidos').doc(id).update({ estado: nextEstado }).then(() => showToast(`Movido a: ${nextEstado}`));
+    db.collection('pedidos').doc(id).update({ estado: nextEstado }).then(() => showToast(`Movido a: ${nextEstado}`));
   };
 
-  const eliminarPedido = (id) => window.db.collection('pedidos').doc(id).delete().then(() => { showToast('Pedido eliminado'); setDeleteId(null); });
+  const eliminarPedido = (id) => db.collection('pedidos').doc(id).delete().then(() => { showToast('Pedido eliminado'); setDeleteId(null); });
 
   const cargarParaEditar = (p) => { 
     setCliente(p.cliente); setDetalle(p.detalle); setPrioridad(p.prioridad || 'Media'); 
@@ -352,7 +439,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     let texto = `Hola *${p.cliente}*! 👋 Somos PolyfanTech.\n\nTe avisamos que tu trabajo (${p.detalle}) está: *${p.estado}*.\n`;
     if(resto > 0) texto += `\n*Saldo pendiente al entregar:* $${resto.toLocaleString('es-AR')}\n`;
     texto += `\nCualquier consulta avisanos!`;
-    window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
+    window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
   };
 
   const safePedidos = pedidos || [];
@@ -496,20 +583,20 @@ function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPe
   const guardarProspecto = () => {
     if (!nombre || !interes) return showToast('Faltan datos', 'error');
     const data = { nombre, interes, estado, celular, registradoPor: loggedUser };
-    if (editId) window.db.collection('prospectos').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); })
-    else window.db.collection('prospectos').add({...data, fecha: new Date().toISOString()}).then(() => { showToast('Guardado'); limpiarForm(); })
+    if (editId) db.collection('prospectos').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); })
+    else db.collection('prospectos').add({...data, fecha: new Date().toISOString()}).then(() => { showToast('Guardado'); limpiarForm(); })
   };
 
-  const eliminarProspecto = (id) => window.db.collection('prospectos').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
+  const eliminarProspecto = (id) => db.collection('prospectos').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
   const cargarParaEditar = (p) => { setNombre(p.nombre); setInteres(p.interes); setEstado(p.estado); setCelular(p.celular || ''); setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   
   const convertirAPedido = (p) => {
     if (window.confirm('¿El cliente confirmó? Esto lo moverá a Pedidos y abrirá su formulario para completar detalles.')) {
-      window.db.collection('pedidos').add({ 
+      db.collection('pedidos').add({ 
         cliente: p.nombre, detalle: p.interes, prioridad: 'Media', urlArchivo: '', celular: p.celular || '', 
         precioTotal: 0, sena: 0, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser 
       }).then((docRef) => { 
-        window.db.collection('prospectos').doc(p.id).delete(); 
+        db.collection('prospectos').doc(p.id).delete(); 
         showToast('¡Venta Cerrada!', 'success'); 
         setPedidoToEdit(docRef.id);
         setActiveTab('pedidos'); 
@@ -569,7 +656,7 @@ function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPe
               <p className="text-sm text-gray-300 mb-4 mt-2 bg-[#0a0a0a]/50 p-3 rounded-xl border border-[#222]/50">{p.interes}</p>
             </div>
             <div className="flex gap-2 mt-auto">
-              <button onClick={() => window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
+              <button onClick={() => window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
               <button onClick={() => convertirAPedido(p)} className="flex-1 bg-[#e2ff00]/10 text-[#e2ff00] text-[9px] uppercase font-black py-3 rounded-xl border border-[#e2ff00]/30 hover:bg-[#e2ff00]/20 transition-colors">Venta Cerrada</button>
             </div>
           </div>
@@ -596,13 +683,13 @@ function InventarioView({ inventario, showToast }) {
   const guardarItem = () => {
     if (!nombre || !cantidad) return showToast('Completá los datos', 'error');
     const data = { nombre, categoria, unidad, cantidad: Number(cantidad), costoUnitario: Number(costoUnitario) || 0, minimoCritico: Number(minimoCritico) };
-    if (editId) window.db.collection('inventario').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
-    else window.db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
+    if (editId) db.collection('inventario').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
   };
 
-  const eliminarItem = (id) => window.db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
+  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
   const cargarParaEditar = (item) => { setNombre(item.nombre); setCantidad(item.cantidad); setCostoUnitario(item.costoUnitario || ''); setCategoria(item.categoria || 'Planchas Polyfan'); setUnidad(item.unidad || 'Unidades'); setMinimoCritico(item.minimoCritico || '2'); setEditId(item.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) window.db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
+  const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
   
   const safeInventario = inventario || [];
   let inventarioFiltrado = safeInventario.filter(i => (i.nombre || '').toLowerCase().includes(busqueda.toLowerCase()));
@@ -683,11 +770,11 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
   const guardarMovimiento = () => {
     if (!monto || !concepto) return showToast('Faltan datos', 'error');
     const data = { tipo, monto: Number(monto), concepto, origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), registradoPor: loggedUser };
-    if (editId) window.db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
-    else window.db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
+    if (editId) db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
   };
 
-  const eliminarMov = (id) => window.db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
+  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
   const cargarParaEditar = (f) => { setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); setEditId(f.id); };
   
   const safeFinanzas = finanzas || [];
@@ -781,7 +868,7 @@ function FinanzasView({ finanzas, loggedUser, showToast }) {
 function PresupuestoView({ showToast }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
   
-  // ¡¡¡¡ MUY IMPORTANTE !!!! Pega la URL de tu Web App de Apps Script aquí
+  // ¡¡¡¡ MUY IMPORTANTE !!!! Reemplazá este enlace por la URL web final de Google Apps Script
   const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
@@ -802,7 +889,7 @@ function PresupuestoView({ showToast }) {
   useEffect(() => { setPrecioAjustado(subtotalRapido * 2); }, [subtotalRapido]);
 
   // ESTADOS BETA AI
-  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false);
+  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
 
   useEffect(() => {
      let cPlacas = betaPlacas.reduce((acc, p) => acc + (Number(p.cantidad) > 0 ? Number(p.cantidad) * (COSTOS_BETA.costoPlacaNeto[p.espesor] + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
@@ -815,7 +902,7 @@ function PresupuestoView({ showToast }) {
     setGenerandoIA(true);
     const promptText = `Cliente: ${betaCliente}\nMedidas: ${betaAncho}x${betaAlto}\nTrabajo: ${betaTrabajo}\nExterior: ${betaExterior}\nLuz LED: ${betaLuz}`;
     
-    // LLAMADA AL BACKEND DE GITHUB HACIA APPS SCRIPT
+    // Conexión segura al Backend de Apps Script
     fetch(URL_BACKEND_GAS, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
