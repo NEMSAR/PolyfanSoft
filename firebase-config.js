@@ -11,9 +11,10 @@ try {
   if (!firebase.apps.length) { 
     firebase.initializeApp(firebaseConfig); 
   }
+  // Exportamos la base de datos al entorno global (window)
   window.db = firebase.firestore();
   window.db.settings({ experimentalForceLongPolling: true });
-  console.log("Firebase conectado correctamente en GitHub Pages.");
+  console.log("Conexión a Firebase: ESTABLECIDA");
 } catch (err) {
-  console.error("Firebase no pudo iniciar: " + err.message);
+  console.error("Fallo crítico en Firebase: " + err.message);
 }
