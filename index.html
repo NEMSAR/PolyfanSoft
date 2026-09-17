@@ -1,95 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Gestión PolyfanTech</title>
   
-  <!-- Ícono de la pestaña (Favicon) y App de celular -->
-  <link rel="icon" type="image/png" href="https://i.imgur.com/U65ittY.png">
-  <link rel="apple-touch-icon" href="https://i.imgur.com/U65ittY.png">
-
-  <style>
-    /* Reseteo básico y color de fondo igual al de la app para que no haya parpadeos blancos */
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #0a0a0a;
-      overflow: hidden; /* Evita el scroll fuera del iframe */
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-   /* Contenedor mágico que corta la parte superior */
-    .app-container {
-      position: absolute;
-      /* Redujimos el recorte para que no se coma tu logo */
-      top: -24px; 
-      left: 0;
-      width: 100%;
-      /* Asegurate de que este número coincida con el de arriba, pero en positivo */
-      height: calc(100% + 24px);
-      z-index: 2;
-    }
-
-    /* El iframe que carga la app de Apps Script */
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    /* Pantalla de carga sutil mientras Google responde */
-    .loading-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1;
-      color: #e2ff00;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(226, 255, 0, 0.2);
-      border-top-color: #e2ff00;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
+  <!-- Estilos Visuales separados -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- LIBRERÍAS BLINDADAS UMD -->
+  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+  <script crossorigin src="[https://unpkg.com/react@18.2.0/umd/react.production.min.js](https://unpkg.com/react@18.2.0/umd/react.production.min.js)"></script>
+  <script crossorigin src="[https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js)"></script>
+  <script src="[https://unpkg.com/@babel/standalone@7.23.9/babel.min.js](https://unpkg.com/@babel/standalone@7.23.9/babel.min.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js](https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js)"></script>
+  <script src="[https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js)"></script>
+  <script src="[https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js](https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js)"></script>
 </head>
 <body>
+  <div id="root"></div>
 
-  <!-- Mensaje de carga que queda por debajo del iframe -->
-  <div class="loading-screen">
-    <div class="spinner"></div>
-    <p>Conectando...</p>
-  </div>
-
- <!-- Contenedor del iFrame -->
-  <div class="app-container">
-    <iframe 
-      src="https://script.google.com/macros/s/AKfycbzTPV7UCb7Tlh3WMQInGnrBAhcUoikACS8HePlPCB98ad5DmygtvuobeJDQV07nBV5R/exec" 
-      allow="fullscreen" 
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads">
-    </iframe>
-  </div>
-
+  <!-- Scripts funcionales separados para evitar colapso de memoria -->
+  <script src="firebase-config.js"></script>
+  <script type="text/babel" src="app.jsx"></script>
 </body>
 </html>
