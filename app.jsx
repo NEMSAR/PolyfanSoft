@@ -1,0 +1,892 @@
+const { useState, useEffect, useMemo, useRef } = React;
+
+// --- LOGOS DEL SISTEMA ---
+const APP_LOGO_URL = "[https://i.imgur.com/YjSvTHr.png](https://i.imgur.com/YjSvTHr.png)"; 
+const TICKET_LOGO_URL = "[https://i.imgur.com/ytru7Zu.png](https://i.imgur.com/ytru7Zu.png)"; 
+const NOVABIT_LOGO_URL = "[https://i.imgur.com/Bh3Dm7l.png](https://i.imgur.com/Bh3Dm7l.png)";
+const PASS_ACCESO = "polyfan2026";
+
+// --- ÍCONOS COMPARTIDOS ---
+const IconHome = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
+const IconClipboard = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14h6"></path><path d="M9 18h6"></path><path d="M9 10h.01"></path></svg>;
+const IconPackage = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>;
+const IconDollar = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
+const IconFileText = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+const IconUsers = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+const IconPlus = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const IconTrash = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+const IconEdit = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const IconClock = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+const IconCheck = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const IconWhatsApp = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>;
+const IconAlertTriangle = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+const IconZap = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>;
+const IconImage = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>;
+const IconTrendingUp = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
+const IconWallet = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>;
+const IconSparkles = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
+
+function NavButton({ icon, label, active, onClick }) { 
+  return ( 
+    <button onClick={onClick} className={`flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] transition-all duration-300 ${active ? 'bg-[#222] text-[#e2ff00] shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] md:scale-110 border border-[#444]' : 'text-gray-500 hover:text-gray-300 hover:scale-105'}`}>
+      {icon}
+      <span className="text-[8px] uppercase tracking-[0.2em] font-bold mt-1.5">{label}</span>
+    </button> 
+  ); 
+}
+
+function Input({ label, type = "text", value, onChange, placeholder, disabled = false }) { 
+  return ( 
+    <div className="space-y-1.5 w-full">
+      <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">{label}</label>
+      <input type={type} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-sm text-white focus:border-[#e2ff00] outline-none transition-all placeholder-gray-700 disabled:opacity-50" />
+    </div> 
+  ); 
+}
+
+// Renderizado seguro de gráficos
+function ChartCanvas({ type, data, options, height = 250 }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      if (chartRef.current) chartRef.current.destroy();
+      if (window.Chart && canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        chartRef.current = new window.Chart(ctx, { type, data, options });
+      }
+    } catch (error) {
+      console.error("Error al renderizar el gráfico:", error);
+    }
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [type, data, options]);
+
+  return <div style={{ height: `${height}px`, width: '100%', position: 'relative' }}><canvas ref={canvasRef}></canvas></div>;
+}
+
+// --- VISTAS DEL SISTEMA ---
+function LoginScreen({ onLogin, showToast }) {
+  const [selectedUser, setSelectedUser] = useState(''); 
+  const [pass, setPass] = useState('');
+  
+  const handleIngresar = () => { 
+    if (pass === PASS_ACCESO) { 
+      onLogin(selectedUser); 
+      showToast(`¡Sesión iniciada, ${selectedUser}!`); 
+    } else { showToast('Credenciales denegadas', 'error'); } 
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative">
+      <div className="w-full max-w-sm md:max-w-md glass-panel border border-[#333] p-10 md:p-12 rounded-[2.5rem] shadow-2xl animate-pop relative overflow-hidden z-10 bg-[#0d0d0d]/80">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#e2ff00] to-transparent opacity-80"></div>
+        <img src={APP_LOGO_URL} alt="PolyfanTech" className="h-12 md:h-14 object-contain mx-auto mb-2 drop-shadow-md" />
+        <h2 className="text-[#e2ff00] text-center text-[9px] font-black uppercase tracking-[0.4em] mb-10 opacity-80">Enterprise Management System</h2>
+        
+        {!selectedUser ? (
+          <div className="space-y-4">
+            <p className="text-center text-gray-500 uppercase text-xs font-bold tracking-widest mb-6">Seleccionar Perfil</p>
+            <button onClick={() => setSelectedUser('Emanuel')} className="w-full glass-panel bg-black/60 border border-[#333] text-white font-black uppercase py-5 rounded-2xl hover:border-[#e2ff00] hover:text-[#e2ff00] transition-all">Emanuel</button>
+            <button onClick={() => setSelectedUser('Gonzalo')} className="w-full glass-panel bg-black/60 border border-[#333] text-white font-black uppercase py-5 rounded-2xl hover:border-[#e2ff00] hover:text-[#e2ff00] transition-all">Gonzalo</button>
+          </div>
+        ) : (
+          <div className="space-y-5 animate-premium">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-gray-400 uppercase text-xs font-bold tracking-widest">Hola, <span className="text-white text-sm">{selectedUser}</span></p>
+              <button onClick={() => setSelectedUser('')} className="text-[9px] bg-[#222] px-3 py-1.5 rounded-full text-gray-400 uppercase font-bold hover:text-white transition-colors">Cambiar</button>
+            </div>
+            <div className="space-y-1 w-full">
+              <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Clave de Acceso</label>
+              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••••" className="w-full glass-panel bg-black/50 border border-[#333] rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em]" />
+            </div>
+            <button onClick={handleIngresar} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-xl mt-4 shadow-[0_0_25px_rgba(226,255,0,0.3)] hover:scale-105 transition-all">Desbloquear Sistema</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DashboardView({ finanzas, pedidos, inventario, prospectos }) {
+  const safeFinanzas = finanzas || [];
+  const safePedidos = pedidos || [];
+  const safeInventario = inventario || [];
+  const safeProspectos = prospectos || [];
+
+  const ingresos = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  const gastosTotales = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto').reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  const gastosCaja = useMemo(() => safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0), [safeFinanzas]);
+  
+  const balanceNeto = ingresos - gastosTotales; 
+  const cajaFisica = ingresos - gastosCaja; 
+  
+  const pedidosPendientes = safePedidos.filter(p => p.estado === 'Pendiente').length; 
+  const pedidosProceso = safePedidos.filter(p => p.estado === 'En Proceso').length;
+  const pedidosCompletados = safePedidos.filter(p => p.estado === 'Completado').length;
+  const totalPedidos = safePedidos.length; 
+  const progresoPedidos = totalPedidos > 0 ? Math.round((pedidosCompletados / totalPedidos) * 100) : 0;
+  
+  const leadsActivos = safeProspectos.filter(p => p.estado !== 'Frío').length;
+  const dineroPorCobrar = safePedidos.filter(p => p.estado !== 'Completado').reduce((a, b) => {
+    const resto = (Number(b.precioTotal) || 0) - (Number(b.sena) || 0);
+    return a + (resto > 0 ? resto : 0);
+  }, 0);
+  const stockCritico = safeInventario.filter(i => Number(i.cantidad) <= (Number(i.minimoCritico) || 0));
+
+  const barChartData = {
+    labels: ['Caja Histórica'],
+    datasets: [
+      { label: 'Ingresos Brutos', data: [ingresos], backgroundColor: '#e2ff00', borderRadius: 4 },
+      { label: 'Gastos Totales', data: [gastosTotales], backgroundColor: '#ef4444', borderRadius: 4 }
+    ]
+  };
+
+  const pieChartData = {
+    labels: ['Pendientes', 'En Proceso', 'Completados'],
+    datasets: [{
+      data: [pedidosPendientes, pedidosProceso, pedidosCompletados],
+      backgroundColor: ['#eab308', '#3b82f6', '#22c55e'],
+      borderWidth: 0, hoverOffset: 4
+    }]
+  };
+
+  const chartOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#aaa', font: { size: 10 } } } },
+    scales: {
+      y: { grid: { color: '#333' }, ticks: { color: '#888', font: { size: 10 } } },
+      x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+    }
+  };
+
+  const pieOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: '#aaa', font: { size: 10 } } } }
+  };
+
+  return (
+    <div className="space-y-6 w-full">
+      {stockCritico.length > 0 && (
+        <div className="w-full bg-red-900/20 border-2 border-red-500/50 rounded-[2rem] p-5 md:p-6 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-red-500 text-white p-2.5 rounded-full"><IconAlertTriangle /></div>
+            <div>
+              <h3 className="text-red-400 font-black uppercase tracking-widest text-xs md:text-sm">Alerta de Compras Requerida</h3>
+              <p className="text-gray-300 text-[10px] md:text-xs mt-1">Suministros por debajo del umbral mínimo definido</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pl-2">
+            {stockCritico.map(item => (
+              <div key={item.id} className="flex justify-between items-center text-xs border border-red-500/30 bg-[#0a0a0a]/50 p-3 rounded-xl">
+                <span className="text-white font-bold truncate pr-2">{item.nombre}</span>
+                <span className="text-red-400 font-black bg-red-500/10 px-2.5 py-1 rounded-md whitespace-nowrap">Quedan: {item.cantidad}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        <div className="w-full lg:w-[65%] glass-panel border border-[#333] rounded-[2rem] p-8 relative overflow-hidden flex flex-col justify-center shadow-lg">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#e2ff00] to-transparent"></div>
+          <div className="flex justify-between items-start mb-4">
+            <p className="text-gray-400 uppercase text-[10px] font-bold tracking-[0.2em] text-center md:text-left">Patrimonio Global (Balance Neto)</p>
+            <div className="hidden md:flex items-center gap-1.5 bg-[#e2ff00]/10 border border-[#e2ff00]/20 px-3 py-1.5 rounded-full">
+              <IconTrendingUp />
+              <span className="text-[#e2ff00] text-[9px] uppercase tracking-widest font-bold">Estado Financiero</span>
+            </div>
+          </div>
+          <h2 className={`text-5xl md:text-6xl font-black tracking-tighter text-center md:text-left ${balanceNeto >= 0 ? 'text-white' : 'text-red-500'}`}>
+            ${balanceNeto.toLocaleString('es-AR')}
+          </h2>
+          <div className="flex flex-col md:flex-row justify-between items-center mt-8 pt-6 border-t border-[#333]/50 gap-4">
+            <div className="text-center md:text-left w-full md:w-auto">
+              <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Total Ingresos</p>
+              <p className="text-lg md:text-xl font-bold text-green-400">${ingresos.toLocaleString('es-AR')}</p>
+            </div>
+            <div className="text-center bg-[#111] px-5 py-2.5 rounded-xl border border-[#222] w-full md:w-auto">
+              <p className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Caja Física (Liquidez)</p>
+              <p className={`text-lg md:text-xl font-bold ${cajaFisica > 0 ? 'text-[#e2ff00]' : 'text-gray-500'}`}>${cajaFisica.toLocaleString('es-AR')}</p>
+            </div>
+            <div className="text-center md:text-right w-full md:w-auto">
+              <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Gastos Totales</p>
+              <p className="text-lg md:text-xl font-bold text-red-400">${gastosTotales.toLocaleString('es-AR')}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-[35%] flex flex-col gap-6">
+          <div className="glass-panel border border-[#333] rounded-[2rem] p-6 text-center shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mb-1 flex justify-center items-center gap-1">
+              <IconDollar /> Dinero en la calle (Por Cobrar)
+            </p>
+            <p className="text-2xl font-black text-[#e2ff00] drop-shadow-md">${dineroPorCobrar.toLocaleString('es-AR')}</p>
+            <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-2">Corresponde a saldos de trabajos en proceso</p>
+          </div>
+          <div className="glass-panel border border-[#333] rounded-[2rem] p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white font-black text-sm uppercase tracking-widest">Producción</h3>
+              <span className="text-xl font-black text-[#e2ff00]">{progresoPedidos}%</span>
+            </div>
+            <div className="w-full bg-[#111] rounded-full h-2 mb-6 overflow-hidden border border-[#222]">
+              <div className="bg-[#e2ff00] h-2 rounded-full shadow-[0_0_10px_#e2ff00]" style={{ width: `${progresoPedidos}%`, transition: 'width 1s ease-in-out' }}></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{pedidosPendientes + pedidosProceso}</p>
+                <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Trabajos Activos</p>
+              </div>
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-[#e2ff00]">{leadsActivos}</p>
+                <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Leads Calientes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        <div className="w-full lg:w-1/2 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
+           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Métricas Financieras</h3>
+           <ChartCanvas type="bar" data={barChartData} options={chartOptions} height={200} />
+        </div>
+        <div className="w-full lg:w-1/2 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
+           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Status de Proyectos</h3>
+           <ChartCanvas type="doughnut" data={pieChartData} options={pieOptions} height={200} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit, setPedidoToEdit }) {
+  const [showForm, setShowForm] = useState(false); 
+  const [filtro, setFiltro] = useState('Pendiente'); 
+  const [busqueda, setBusqueda] = useState(''); 
+  const [cliente, setCliente] = useState(''); 
+  const [detalle, setDetalle] = useState(''); 
+  const [prioridad, setPrioridad] = useState('Media'); 
+  const [urlArchivo, setUrlArchivo] = useState(''); 
+  const [celular, setCelular] = useState(''); 
+  const [precioTotal, setPrecioTotal] = useState(''); 
+  const [sena, setSena] = useState(''); 
+  const [fechaLimite, setFechaLimite] = useState(''); 
+  const [insumosUsados, setInsumosUsados] = useState([]);
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null); 
+
+  useEffect(() => {
+    if (pedidoToEdit && window.db) {
+       const p = (pedidos || []).find(x => x.id === pedidoToEdit);
+       if (p) cargarParaEditar(p);
+       setPedidoToEdit(null);
+    }
+  }, [pedidoToEdit, pedidos]);
+
+  const limpiarForm = () => { 
+    setCliente(''); setDetalle(''); setPrioridad('Media'); 
+    setUrlArchivo(''); setCelular(''); setPrecioTotal(''); 
+    setSena(''); setFechaLimite(''); setInsumosUsados([]);
+    setEditId(null); setShowForm(false); 
+  };
+
+  const addInsumo = () => setInsumosUsados([...insumosUsados, { idInsumo: '', cantidad: '' }]);
+  const updateInsumo = (index, field, val) => {
+      const arr = [...insumosUsados];
+      arr[index][field] = val;
+      setInsumosUsados(arr);
+  };
+  const removeInsumo = (index) => setInsumosUsados(insumosUsados.filter((_, i) => i !== index));
+
+  const procesarDescuentoInventario = () => {
+      insumosUsados.forEach(ins => {
+          if (ins.idInsumo && Number(ins.cantidad) > 0) {
+             const itemRef = window.db.collection('inventario').doc(ins.idInsumo);
+             itemRef.get().then(doc => {
+                 if (doc.exists) {
+                     const currentCant = Number(doc.data().cantidad) || 0;
+                     const nuevaCant = currentCant - Number(ins.cantidad);
+                     itemRef.update({ cantidad: nuevaCant });
+                 }
+             });
+          }
+      });
+  };
+
+  const guardarPedido = () => {
+    if (!cliente || !detalle) return showToast('Faltan datos del cliente', 'error');
+    const data = { 
+      cliente, detalle, prioridad, urlArchivo, celular, 
+      precioTotal: Number(precioTotal) || 0, sena: Number(sena) || 0, 
+      fechaLimite: fechaLimite || null 
+    };
+    
+    if (editId) {
+      window.db.collection('pedidos').doc(editId).update(data)
+        .then(() => { procesarDescuentoInventario(); showToast('Pedido actualizado y stock descontado'); limpiarForm(); })
+    } else {
+      window.db.collection('pedidos').add({ ...data, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser })
+        .then(() => { procesarDescuentoInventario(); showToast('Pedido cargado y stock descontado'); limpiarForm(); })
+    }
+  };
+
+  const actualizarEstado = (id, estadoActual) => {
+    const estados = ['Pendiente', 'En Proceso', 'Completado']; 
+    const nextEstado = estados[(estados.indexOf(estadoActual) + 1) % estados.length];
+    window.db.collection('pedidos').doc(id).update({ estado: nextEstado }).then(() => showToast(`Movido a: ${nextEstado}`));
+  };
+
+  const eliminarPedido = (id) => window.db.collection('pedidos').doc(id).delete().then(() => { showToast('Pedido eliminado'); setDeleteId(null); });
+
+  const cargarParaEditar = (p) => { 
+    setCliente(p.cliente); setDetalle(p.detalle); setPrioridad(p.prioridad || 'Media'); 
+    setUrlArchivo(p.urlArchivo || ''); setCelular(p.celular || ''); 
+    setPrecioTotal(p.precioTotal || ''); setSena(p.sena || ''); 
+    setFechaLimite(p.fechaLimite || ''); setInsumosUsados([]); 
+    setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
+
+  const enviarWhatsApp = (p) => {
+    const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
+    let texto = `Hola *${p.cliente}*! 👋 Somos PolyfanTech.\n\nTe avisamos que tu trabajo (${p.detalle}) está: *${p.estado}*.\n`;
+    if(resto > 0) texto += `\n*Saldo pendiente al entregar:* $${resto.toLocaleString('es-AR')}\n`;
+    texto += `\nCualquier consulta avisanos!`;
+    window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
+  };
+
+  const safePedidos = pedidos || [];
+  const pedidosFiltrados = safePedidos
+    .filter(p => p.estado === filtro)
+    .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
+        <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(226,255,0,0.15)] hover:scale-[1.02] transition-transform">
+          {showForm ? 'Cerrar Panel' : <><IconPlus /> Cargar Nuevo Trabajo</>}
+        </button>
+        
+        {showForm && (
+          <div className={`glass-panel border p-6 rounded-[2rem] space-y-4 animate-premium transition-colors duration-300 ${editId ? 'border-[#e2ff00]' : 'border-[#333]'}`}>
+            {editId && <div className="text-[#e2ff00] text-[10px] font-black uppercase tracking-widest text-center bg-[#e2ff00]/10 py-2 rounded-lg mb-2">Modificando Pedido</div>}
+            
+            <Input label="Cliente" value={cliente} onChange={setCliente} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input type="number" label="WhatsApp" value={celular} onChange={setCelular} />
+              <Input type="date" label="Fecha Límite" value={fechaLimite} onChange={setFechaLimite} />
+            </div>
+            <Input label="Link de Diseño" value={urlArchivo} onChange={setUrlArchivo} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input type="number" label="Total ($)" value={precioTotal} onChange={setPrecioTotal} />
+              <Input type="number" label="Seña ($)" value={sena} onChange={setSena} />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">Prioridad</label>
+              <select value={prioridad} onChange={e => setPrioridad(e.target.value)} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] appearance-none">
+                <option value="Baja">Baja</option><option value="Media">Media</option><option value="Alta">Alta 🔥</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] text-gray-400 uppercase font-bold tracking-widest ml-1">Detalle del Trabajo</label>
+              <textarea className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] transition-all" rows="2" value={detalle} onChange={e => setDetalle(e.target.value)}></textarea>
+            </div>
+
+            <div className="bg-[#111] p-4 rounded-xl border border-[#333] mt-2">
+              <div className="flex justify-between items-center mb-3">
+                 <label className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest flex items-center gap-1"><IconPackage /> Consumo de Material</label>
+              </div>
+              <p className="text-[8px] text-gray-500 uppercase tracking-widest mb-3">Selecciona los insumos a usar. Se descontarán automáticamente del stock al guardar.</p>
+              {insumosUsados.map((ins, i) => (
+                  <div key={i} className="flex gap-2 items-center mb-2">
+                      <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
+                          <option value="">Seleccionar Material...</option>
+                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                      </select>
+                      <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
+                      <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
+                  </div>
+              ))}
+              <button onClick={addInsumo} className="w-full bg-[#0a0a0a] border border-dashed border-[#444] text-gray-400 text-[9px] font-bold uppercase py-2 rounded-lg hover:border-[#e2ff00] hover:text-[#e2ff00] transition-colors mt-1">+ Descontar Insumo del Stock</button>
+            </div>
+            
+            <div className="flex gap-3 pt-2">
+              {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
+              <button onClick={guardarPedido} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black shadow-[0_0_15px_rgba(226,255,0,0.2)]' : 'w-full bg-white text-black'} font-bold uppercase py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
+                {editId ? 'Actualizar Pedido' : 'Guardar e Iniciar Trabajo'}
+              </button>
+            </div>
+          </div>
+        )}
+        <input type="text" placeholder="Buscar por cliente o trabajo..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full glass-panel bg-[#111]/80 border border-[#333] rounded-2xl py-3.5 text-sm text-white focus:border-[#e2ff00] outline-none transition-all search-input" />
+        <div className="flex flex-col bg-[#111] p-1.5 rounded-2xl border border-[#333] gap-1">
+          {['Pendiente', 'En Proceso', 'Completado'].map(f => (
+            <button key={f} onClick={() => setFiltro(f)} className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtro === f ? 'bg-[#2a2a2a] text-white shadow-md border border-[#444]' : 'text-gray-500 hover:text-gray-300'}`}>{f}</button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="w-full md:w-[60%] lg:w-[65%] space-y-4">
+        {pedidosFiltrados.map((p, i) => {
+          const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
+          return (
+            <div key={p.id} className={`glass-panel p-5 md:p-6 rounded-3xl border transition-all animate-stagger md:flex md:flex-col md:gap-2 ${p.prioridad === 'Alta' ? 'border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.15)] bg-red-900/10' : p.prioridad === 'Media' ? 'border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.1)] bg-yellow-900/10' : 'border-[#333] hover:border-[#444]'}`} style={{animationDelay: `${i * 0.05}s`}}>
+              <div className="flex justify-between items-start mb-3 md:mb-0">
+                <div>
+                  <h3 className="font-black text-xl md:text-2xl text-white flex items-center gap-2">{p.cliente}</h3>
+                  <div className="flex flex-wrap gap-2 items-center mt-2">
+                    <span className={`text-[8px] px-2.5 py-0.5 rounded-full uppercase tracking-widest font-black border ${p.prioridad === 'Alta' ? 'bg-red-500/20 text-red-400 border-red-500/40' : p.prioridad === 'Media' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{p.prioridad}</span>
+                    {p.fechaLimite && <span className="flex items-center gap-1 text-[9px] text-[#e2ff00] font-bold uppercase tracking-widest bg-[#e2ff00]/10 px-2 py-0.5 rounded-full border border-[#e2ff00]/20"><IconClock /> Entrega: {new Date(p.fechaLimite + 'T00:00:00').toLocaleDateString()}</span>}
+                  </div>
+                </div>
+                <div className="flex gap-1.5 md:gap-2">
+                  {deleteId === p.id ? (
+                    <div className="flex gap-1 items-center bg-[#111] border border-[#222] p-1.5 rounded-lg">
+                      <button onClick={() => eliminarPedido(p.id)} className="bg-red-600 text-white font-bold text-[10px] px-3 py-1.5 rounded hover:bg-red-500 transition-colors">Confirmar</button>
+                      <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[10px] px-3 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
+                    </div>
+                  ) : (
+                    <>
+                      <button onClick={() => cargarParaEditar(p)} className="text-gray-400 hover:text-[#e2ff00] bg-[#0a0a0a]/50 border border-[#222] p-2.5 rounded-full transition-colors"><IconEdit /></button>
+                      <button onClick={() => setDeleteId(p.id)} className="text-gray-400 hover:text-red-500 bg-[#0a0a0a]/50 border border-[#222] p-2.5 rounded-full transition-colors"><IconTrash /></button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm md:text-base text-gray-300 my-4 bg-[#0a0a0a]/50 p-4 rounded-xl border border-[#222]/50 leading-relaxed">{p.detalle}</p>
+              {(Number(p.precioTotal) > 0 || Number(p.sena) > 0) && (
+                <div className="flex justify-between items-center bg-[#0a0a0a]/80 border border-[#333] p-3 rounded-xl mb-4 text-xs">
+                  <div><span className="text-gray-500">Total:</span> <strong className="text-white">${Number(p.precioTotal).toLocaleString('es-AR')}</strong></div>
+                  <div><span className="text-gray-500">Seña:</span> <strong className="text-green-400">${Number(p.sena).toLocaleString('es-AR')}</strong></div>
+                  <div><span className="text-gray-500">Saldo:</span> <strong className="text-[#e2ff00]">${resto.toLocaleString('es-AR')}</strong></div>
+                </div>
+              )}
+              <div className="md:flex md:justify-between md:items-center w-full">
+                <div className="mb-4 md:mb-0">
+                  {p.urlArchivo && <a href={p.urlArchivo} target="_blank" rel="noreferrer" className="text-[10px] md:text-xs text-[#e2ff00] underline break-all hover:text-white transition-colors">Abrir Archivo</a>}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => enviarWhatsApp(p)} className="flex-1 md:flex-none md:w-32 bg-[#1a2e1a] text-green-400 text-[10px] uppercase font-bold py-3.5 rounded-xl border border-green-900/30 flex items-center justify-center gap-2 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Chat</button>
+                  <button onClick={() => actualizarEstado(p.id, p.estado)} className="flex-1 md:flex-none md:w-40 bg-[#1a1a1a] text-white text-[10px] uppercase font-bold py-3.5 rounded-xl border border-[#333] hover:bg-[#222] transition-colors">Avanzar Etapa</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPedidoToEdit }) {
+  const [showForm, setShowForm] = useState(false); 
+  const [filtro, setFiltro] = useState('Todos'); 
+  const [busqueda, setBusqueda] = useState(''); 
+  const [nombre, setNombre] = useState(''); 
+  const [interes, setInteres] = useState(''); 
+  const [estado, setEstado] = useState('Esperando Portfolio'); 
+  const [celular, setCelular] = useState(''); 
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null); 
+
+  const limpiarForm = () => { setNombre(''); setInteres(''); setEstado('Esperando Portfolio'); setCelular(''); setEditId(null); setShowForm(false); };
+
+  const guardarProspecto = () => {
+    if (!nombre || !interes) return showToast('Faltan datos', 'error');
+    const data = { nombre, interes, estado, celular, registradoPor: loggedUser };
+    if (editId) window.db.collection('prospectos').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); })
+    else window.db.collection('prospectos').add({...data, fecha: new Date().toISOString()}).then(() => { showToast('Guardado'); limpiarForm(); })
+  };
+
+  const eliminarProspecto = (id) => window.db.collection('prospectos').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
+  const cargarParaEditar = (p) => { setNombre(p.nombre); setInteres(p.interes); setEstado(p.estado); setCelular(p.celular || ''); setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  
+  const convertirAPedido = (p) => {
+    if (window.confirm('¿El cliente confirmó? Esto lo moverá a Pedidos y abrirá su formulario para completar detalles.')) {
+      window.db.collection('pedidos').add({ 
+        cliente: p.nombre, detalle: p.interes, prioridad: 'Media', urlArchivo: '', celular: p.celular || '', 
+        precioTotal: 0, sena: 0, estado: 'Pendiente', fecha: new Date().toISOString(), registradoPor: loggedUser 
+      }).then((docRef) => { 
+        window.db.collection('prospectos').doc(p.id).delete(); 
+        showToast('¡Venta Cerrada!', 'success'); 
+        setPedidoToEdit(docRef.id);
+        setActiveTab('pedidos'); 
+      });
+    }
+  };
+
+  const safeProspectos = prospectos || [];
+  let prospectosFiltrados = safeProspectos.filter(p => (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.interes || '').toLowerCase().includes(busqueda.toLowerCase())).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  if (filtro !== 'Todos') prospectosFiltrados = prospectosFiltrados.filter(p => p.estado === filtro);
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
+        <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(226,255,0,0.15)] hover:scale-[1.02] transition-transform">
+          {showForm ? 'Cerrar Panel' : <><IconUsers /> Nuevo Prospecto</>}
+        </button>
+        {showForm && (
+          <div className={`glass-panel border p-6 rounded-[2rem] space-y-4 animate-premium transition-colors duration-300 ${editId ? 'border-[#e2ff00]' : 'border-[#333]'}`}>
+            <Input label="Nombre o Empresa" value={nombre} onChange={setNombre} />
+            <Input type="number" label="WhatsApp" value={celular} onChange={setCelular} />
+            <div className="space-y-1">
+              <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Estado de la Venta</label>
+              <select value={estado} onChange={e => setEstado(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] appearance-none">
+                <option value="Caliente">🔥 Muy interesado</option><option value="Esperando Portfolio">👀 Esperando ver fotos</option><option value="Frío">❄️ Frío / Pausado</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">¿Qué busca?</label>
+              <textarea className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] transition-all" rows="2" value={interes} onChange={e => setInteres(e.target.value)}></textarea>
+            </div>
+            <div className="flex gap-3 pt-2">
+              {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+              <button onClick={guardarProspecto} className="w-full bg-white text-black font-bold uppercase py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all">Guardar Lead</button>
+            </div>
+          </div>
+        )}
+        <input type="text" placeholder="Buscar prospectos..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full glass-panel bg-[#111]/80 border border-[#333] rounded-2xl py-3.5 text-sm text-white focus:border-[#e2ff00] outline-none transition-all search-input" />
+        <div className="flex flex-col bg-[#111] p-1.5 rounded-2xl border border-[#333] gap-1">
+          {['Todos', 'Caliente', 'Esperando Portfolio', 'Frío'].map(f => (
+            <button key={f} onClick={() => setFiltro(f)} className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtro === f ? 'bg-[#2a2a2a] text-white shadow-md border border-[#444]' : 'text-gray-500 hover:text-gray-300'}`}>{f}</button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="w-full md:w-[60%] lg:w-[65%] grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {prospectosFiltrados.map((p, i) => (
+          <div key={p.id} className={`glass-panel p-5 md:p-6 rounded-3xl border transition-all animate-stagger flex flex-col justify-between ${p.estado === 'Caliente' ? 'border-red-500/50 bg-red-900/10' : p.estado === 'Esperando Portfolio' ? 'border-yellow-500/50 bg-yellow-900/10' : 'border-[#333] opacity-70 hover:opacity-100'}`} style={{animationDelay: `${i * 0.05}s`}}>
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-xl text-white">{p.nombre}</h3>
+                <div className="flex gap-1.5">
+                  <button onClick={() => cargarParaEditar(p)} className="text-gray-400 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                  <button onClick={() => eliminarProspecto(p.id)} className="text-gray-400 hover:text-red-500 p-1.5"><IconTrash /></button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-300 mb-4 mt-2 bg-[#0a0a0a]/50 p-3 rounded-xl border border-[#222]/50">{p.interes}</p>
+            </div>
+            <div className="flex gap-2 mt-auto">
+              <button onClick={() => window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
+              <button onClick={() => convertirAPedido(p)} className="flex-1 bg-[#e2ff00]/10 text-[#e2ff00] text-[9px] uppercase font-black py-3 rounded-xl border border-[#e2ff00]/30 hover:bg-[#e2ff00]/20 transition-colors">Venta Cerrada</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InventarioView({ inventario, showToast }) {
+  const [showForm, setShowForm] = useState(false); 
+  const [busqueda, setBusqueda] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('Todas');
+  const [nombre, setNombre] = useState(''); 
+  const [cantidad, setCantidad] = useState(''); 
+  const [costoUnitario, setCostoUnitario] = useState(''); 
+  const [categoria, setCategoria] = useState('Planchas Polyfan'); 
+  const [unidad, setUnidad] = useState('Unidades'); 
+  const [minimoCritico, setMinimoCritico] = useState('2'); 
+  const [editId, setEditId] = useState(null);
+
+  const limpiarForm = () => { setNombre(''); setCantidad(''); setCostoUnitario(''); setCategoria('Planchas Polyfan'); setUnidad('Unidades'); setMinimoCritico('2'); setEditId(null); setShowForm(false); };
+  
+  const guardarItem = () => {
+    if (!nombre || !cantidad) return showToast('Completá los datos', 'error');
+    const data = { nombre, categoria, unidad, cantidad: Number(cantidad), costoUnitario: Number(costoUnitario) || 0, minimoCritico: Number(minimoCritico) };
+    if (editId) window.db.collection('inventario').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else window.db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
+  };
+
+  const eliminarItem = (id) => window.db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
+  const cargarParaEditar = (item) => { setNombre(item.nombre); setCantidad(item.cantidad); setCostoUnitario(item.costoUnitario || ''); setCategoria(item.categoria || 'Planchas Polyfan'); setUnidad(item.unidad || 'Unidades'); setMinimoCritico(item.minimoCritico || '2'); setEditId(item.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) window.db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
+  
+  const safeInventario = inventario || [];
+  let inventarioFiltrado = safeInventario.filter(i => (i.nombre || '').toLowerCase().includes(busqueda.toLowerCase()));
+  if (categoriaFiltro !== 'Todas') inventarioFiltrado = inventarioFiltrado.filter(i => i.categoria === categoriaFiltro);
+  
+  const categoriasUnicas = ['Todas', ...new Set(safeInventario.map(i => i.categoria || 'General'))];
+  const valorTotalInventario = safeInventario.reduce((sum, item) => sum + (Number(item.cantidad) * Number(item.costoUnitario || 0)), 0);
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
+        <div className="glass-panel bg-[#111]/80 border border-[#333] rounded-[1.5rem] p-5 text-center shadow-lg">
+            <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-1">Valor Patrimonial del Stock</span><br/>
+            <span className="text-3xl font-black text-[#e2ff00]">${valorTotalInventario.toLocaleString('es-AR')}</span>
+        </div>
+        <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full glass-panel border border-[#333] text-white font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 hover:bg-[#111] shadow-lg">
+          {showForm ? 'Cerrar Gestor' : <><IconPlus /> Administrar Insumo</>}
+        </button>
+        {showForm && (
+          <div className="glass-panel border border-[#e2ff00] p-6 rounded-[2rem] space-y-4">
+            <Input label="Nombre del Insumo" value={nombre} onChange={setNombre} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full"><label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Categoría</label><select value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none"><option>Planchas Polyfan</option><option>Pinturas / Aerosoles</option><option>Pegamentos / Siliconas</option><option>Electrónica / LED</option><option>Insumos 3D</option><option>Varios</option></select></div>
+              <div className="space-y-1 w-full"><label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Medida</label><select value={unidad} onChange={e => setUnidad(e.target.value)} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none"><option>Unidades</option><option>Metros</option><option>Litros</option><option>Gramos</option></select></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Input type="number" label="Cant. Real" value={cantidad} onChange={setCantidad} />
+              <Input type="number" label="Alerta Min." value={minimoCritico} onChange={setMinimoCritico} />
+              <Input type="number" label="Costo U. ($)" value={costoUnitario} onChange={setCostoUnitario} />
+            </div>
+            <button onClick={guardarItem} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Guardar Insumo</button>
+          </div>
+        )}
+        <input type="text" placeholder="Buscar material..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full glass-panel bg-[#111]/80 border border-[#333] rounded-2xl py-3.5 px-4 text-sm text-white outline-none" />
+        <div className="flex flex-wrap gap-2">
+           {categoriasUnicas.map(cat => <button key={cat} onClick={() => setCategoriaFiltro(cat)} className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${categoriaFiltro === cat ? 'bg-[#e2ff00] text-black' : 'bg-[#111] text-gray-400 border border-[#333] hover:text-white'}`}>{cat}</button>)}
+        </div>
+      </div>
+
+      <div className="w-full md:w-[60%] lg:w-[65%] grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {inventarioFiltrado.map((item, i) => (
+          <div key={item.id} className={`glass-panel p-5 rounded-2xl flex flex-col justify-between ${Number(item.cantidad) <= (Number(item.minimoCritico) || 0) ? 'border-red-500/50 bg-red-900/10' : 'border-[#333]'}`}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="pr-2"><p className="font-bold text-lg text-white leading-tight">{item.nombre}</p><p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mt-1">{item.categoria}</p></div>
+              <div className="flex gap-1.5 items-center">
+                <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                <button onClick={() => eliminarItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
+              </div>
+            </div>
+            {Number(item.costoUnitario) > 0 && (
+                <div className="mb-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest border-b border-[#222] pb-2">
+                    Costo U: <span className="text-white">${item.costoUnitario}</span> | Total: <span className="text-[#e2ff00]">${(item.costoUnitario * item.cantidad).toLocaleString('es-AR')}</span>
+                </div>
+            )}
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex items-center gap-1 bg-[#0a0a0a] p-1 rounded-xl border border-[#222]">
+                <button onClick={() => actualizarCantidad(item.id, item.cantidad, -1)} className="w-8 h-8 font-bold text-xl text-gray-500 hover:text-white">-</button>
+                <span className="text-xl font-black min-w-[3.5rem] text-center text-[#e2ff00]">{item.cantidad}</span>
+                <button onClick={() => actualizarCantidad(item.id, item.cantidad, 1)} className="w-8 h-8 font-bold text-xl text-gray-500 hover:text-white">+</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FinanzasView({ finanzas, loggedUser, showToast }) {
+  const [tipo, setTipo] = useState('Ingreso'); 
+  const [monto, setMonto] = useState(''); 
+  const [concepto, setConcepto] = useState(''); 
+  const [origen, setOrigen] = useState('Caja Negocio'); 
+  const [editId, setEditId] = useState(null);
+
+  const limpiarForm = () => { setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); setEditId(null); setTipo('Ingreso'); };
+  
+  const guardarMovimiento = () => {
+    if (!monto || !concepto) return showToast('Faltan datos', 'error');
+    const data = { tipo, monto: Number(monto), concepto, origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), registradoPor: loggedUser };
+    if (editId) window.db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else window.db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
+  };
+
+  const eliminarMov = (id) => window.db.collection('finanzas').doc(id).delete().then(() => showToast('Eliminado', 'success'));
+  const cargarParaEditar = (f) => { setTipo(f.tipo); setMonto(f.monto); setConcepto(f.concepto); setOrigen(f.origen || 'Caja Negocio'); setEditId(f.id); };
+  
+  const safeFinanzas = finanzas || [];
+  const list = [...safeFinanzas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  const ingresos = safeFinanzas.filter(f => f.tipo === 'Ingreso').reduce((a, b) => a + Number(b.monto), 0);
+  const gastosCaja = safeFinanzas.filter(f => f.tipo === 'Gasto' && (!f.origen || f.origen === 'Caja Negocio')).reduce((a, b) => a + Number(b.monto), 0);
+  const cajaFisica = ingresos - gastosCaja; 
+  
+  const aporteE = safeFinanzas.filter(f => f.tipo === 'Gasto' && f.origen === 'Emanuel').reduce((a, b) => a + Number(b.monto), 0);
+  const aporteG = safeFinanzas.filter(f => f.tipo === 'Gasto' && f.origen === 'Gonzalo').reduce((a, b) => a + Number(b.monto), 0);
+
+  let fondos = Math.max(0, cajaFisica); 
+  let pagoE = 0; let pagoG = 0;
+  
+  if (fondos > 0) {
+    let mitad = fondos / 2; let reqE = Math.min(aporteE, mitad); let reqG = Math.min(aporteG, mitad);
+    pagoE += reqE; pagoG += reqG; fondos -= (reqE + reqG);
+    if (fondos > 0) {
+      let restoE = Math.min(aporteE - pagoE, fondos); pagoE += restoE; fondos -= restoE;
+      let restoG = Math.min(aporteG - pagoG, fondos); pagoG += restoG; fondos -= restoG;
+    }
+  }
+  
+  const gananciaLibre = fondos;
+  const fondoNegocio = gananciaLibre * 0.40;
+  const dividendoE = gananciaLibre * 0.30;
+  const dividendoG = gananciaLibre * 0.30;
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[45%] lg:w-[40%] space-y-6 flex-shrink-0 md:sticky md:top-10">
+        <div className="glass-panel border border-[#333] p-6 md:p-8 rounded-[2rem] space-y-5">
+          <h2 className="text-[#e2ff00] text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-center">Control de Caja</h2>
+          <div className="flex p-1.5 bg-[#0a0a0a] rounded-2xl border border-[#222]">
+            <button onClick={() => {setTipo('Ingreso'); setOrigen('Caja Negocio');}} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest ${tipo === 'Ingreso' ? 'bg-[#1a2e1a] text-green-400' : 'text-gray-600'}`}>Ingreso</button>
+            <button onClick={() => setTipo('Gasto')} className={`flex-1 py-3 md:py-4 rounded-xl font-bold uppercase text-[10px] tracking-widest ${tipo === 'Gasto' ? 'bg-[#2e1a1a] text-red-400' : 'text-gray-600'}`}>Gasto</button>
+          </div>
+          <Input type="number" label="Monto Real ($)" value={monto} onChange={setMonto} />
+          {tipo === 'Gasto' && (
+            <div className="space-y-1.5 w-full">
+              <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿De dónde salió el dinero?</label>
+              <select value={origen} onChange={e => setOrigen(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-sm text-white outline-none">
+                <option value="Caja Negocio">Caja Fuerte (Dinero del Taller)</option>
+                <option value="Emanuel">Inversión de Emanuel (Bolsillo)</option>
+                <option value="Gonzalo">Inversión de Gonzalo (Bolsillo)</option>
+              </select>
+            </div>
+          )}
+          <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
+          <button onClick={guardarMovimiento} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Registrar en Caja</button>
+        </div>
+
+        <div className="glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg bg-[#111]">
+          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Liquidación Automática</h3>
+          <div className="flex justify-between items-center mb-5"><span className="text-gray-400 text-[10px] uppercase font-bold">Efectivo Físico:</span><span className="font-black text-xl text-white">${cajaFisica.toLocaleString('es-AR')}</span></div>
+          <div className="space-y-3 mb-6">
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Recupero Inv. Emanuel</span><span className="font-black text-white">${pagoE.toLocaleString('es-AR')}</span></div>
+            <div className="bg-[#0a0a0a] border border-[#222] p-3 rounded-xl flex justify-between"><span className="text-xs font-bold text-gray-300">Recupero Inv. Gonzalo</span><span className="font-black text-white">${pagoG.toLocaleString('es-AR')}</span></div>
+          </div>
+          <div className="border-t border-[#222] pt-4">
+            <span className="text-[10px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 block">Ganancia Neta: ${gananciaLibre.toLocaleString('es-AR')}</span>
+            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333] mb-2"><span className="text-[10px] text-gray-400 font-bold uppercase">Reserva Negocio (40%)</span><span className="text-sm font-black text-white">${fondoNegocio.toLocaleString('es-AR')}</span></div>
+            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333] mb-2"><span className="text-[10px] text-gray-400 font-bold uppercase">Emanuel (30%)</span><span className="text-sm font-black text-blue-400">${dividendoE.toLocaleString('es-AR')}</span></div>
+            <div className="flex justify-between bg-[#111] p-2.5 rounded-lg border border-[#333]"><span className="text-[10px] text-gray-400 font-bold uppercase">Gonzalo (30%)</span><span className="text-sm font-black text-green-400">${dividendoG.toLocaleString('es-AR')}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full md:w-[55%] lg:w-[60%] space-y-3">
+        {list.map((f, i) => (
+          <div key={f.id} className="glass-panel p-5 rounded-2xl flex justify-between items-center border border-[#333]">
+            <div className="flex-1 pr-4">
+              <p className="font-bold text-white text-base mb-1">{f.concepto}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[9px] uppercase tracking-widest text-gray-500">{new Date(f.fecha).toLocaleDateString()}</span>
+                {f.tipo === 'Gasto' && f.origen && f.origen !== 'Caja Negocio' && <span className="text-[8px] bg-[#e2ff00]/20 text-[#e2ff00] px-2 py-0.5 rounded uppercase font-bold ml-1">Pagó: {f.origen}</span>}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`font-black text-xl ${f.tipo === 'Ingreso' ? 'text-green-400' : 'text-red-400'}`}>{f.tipo === 'Ingreso' ? '+' : '-'}${Number(f.monto).toLocaleString('es-AR')}</span>
+              <button onClick={() => eliminarMov(f.id)} className="text-gray-400 hover:text-red-500 p-1 ml-2"><IconTrash /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PresupuestoView({ showToast }) {
+  const [modoCotizador, setModoCotizador] = useState('Rapido');
+  
+  // ¡¡¡¡ MUY IMPORTANTE !!!! Pega la URL de tu Web App de Apps Script aquí
+  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
+  
+  const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
+  const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
+  const AREA_PLACA = 0.72;
+
+  // ESTADOS EXPRESS
+  const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
+
+  const m2Totales = (Number(crAncho) * Number(crAlto)) || 0; 
+  let placasEstimadasFrente = m2Totales > 0 ? Math.ceil((m2Totales * (crDensidad === '100' ? 1 : crDensidad === '65' ? 1.4 : 1.8)) / AREA_PLACA) : 0;
+  let costoPlacasRapido = placasEstimadasFrente * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca);
+  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') { costoPlacasRapido += Math.ceil((m2Totales * 1.2) / AREA_PLACA) * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca); }
+  
+  let horasEstimadas = m2Totales * Number(crComplejidad) + (crExterior === 'Si' ? m2Totales * 1.5 : 0) + (crLeds === 'Si' ? m2Totales * 3 : 0) + (crEspesorFondo !== 'Ninguno' ? m2Totales * 1.5 : 0);
+  let subtotalRapido = costoPlacasRapido + (horasEstimadas * COSTOS_EXPRESS.valorHora) + (costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3)) + (crLeds === 'Si' ? (((Number(crAncho) + Number(crAlto)) * 3 * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente + (Math.ceil(m2Totales * 12) * COSTOS_EXPRESS.costoSoporte3D)) : 0) + (crInstalacion === 'Instalación Básica' ? COSTOS_EXPRESS.instalacionBasica : crInstalacion === 'Compleja / Altura' ? COSTOS_EXPRESS.instalacionAltura : 0);
+  
+  useEffect(() => { setPrecioAjustado(subtotalRapido * 2); }, [subtotalRapido]);
+
+  // ESTADOS BETA AI
+  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false);
+
+  useEffect(() => {
+     let cPlacas = betaPlacas.reduce((acc, p) => acc + (Number(p.cantidad) > 0 ? Number(p.cantidad) * (COSTOS_BETA.costoPlacaNeto[p.espesor] + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
+     let subB = cPlacas + COSTOS_BETA.fijoPintura + COSTOS_BETA.fijoLuzMaquinas + COSTOS_BETA.fijoManoDeObra + COSTOS_BETA.fijoPegamento + (betaVinilo === 'Si' ? ((Number(betaAncho)*Number(betaAlto)) * COSTOS_BETA.precioViniloM2) : 0) + (betaExterior === 'Si' ? COSTOS_BETA.adicionalExterior : 0) + (betaLuz === 'Si' ? (Number(betaMetrosLed) * COSTOS_BETA.precioMetroLed) + (Number(betaMetrosCable) * COSTOS_BETA.precioMetroCable) + COSTOS_BETA.fijoSoportes3D + COSTOS_BETA.fijoFuenteLuz : 0) + (betaInstalacion === 'Altura' ? COSTOS_BETA.instalacionAltura : betaInstalacion === 'Normal' ? COSTOS_BETA.instalacionNormal : 0);
+     setBetaPrecioAjustado(subB);
+  }, [betaPlacas, betaAncho, betaAlto, betaVinilo, betaExterior, betaLuz, betaMetrosLed, betaMetrosCable, betaInstalacion]);
+
+  const generarPropuestaIA = () => {
+    if(!betaCliente || !betaAncho) return showToast("Faltan datos básicos", "error");
+    setGenerandoIA(true);
+    const promptText = `Cliente: ${betaCliente}\nMedidas: ${betaAncho}x${betaAlto}\nTrabajo: ${betaTrabajo}\nExterior: ${betaExterior}\nLuz LED: ${betaLuz}`;
+    
+    // LLAMADA AL BACKEND DE GITHUB HACIA APPS SCRIPT
+    fetch(URL_BACKEND_GAS, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada"); }
+      else { showToast("Error IA: " + data.error, "error"); }
+      setGenerandoIA(false);
+    }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
+  };
+
+  return (
+    <div className="space-y-6 w-full">
+      <div className="flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shadow-lg flex-col md:flex-row md:w-3/4 md:mx-auto gap-1">
+        <button onClick={() => setModoCotizador('Rapido')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${modoCotizador === 'Rapido' ? 'bg-[#e2ff00] text-black' : 'text-gray-500'}`}>Express 3.0</button>
+        <button onClick={() => setModoCotizador('Beta')} className={`flex-1 py-3 md:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${modoCotizador === 'Beta' ? 'bg-purple-600 text-white' : 'text-gray-500'}`}>Beta (IA)</button>
+      </div>
+
+      {modoCotizador === 'Rapido' && (
+         <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+            <div className="w-full md:w-1/2 glass-panel border border-[#333] p-6 rounded-[2rem] space-y-6">
+              <h3 className="text-white font-black text-lg uppercase tracking-widest">Calculadora Rápida</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Input type="number" label="Ancho (m)" value={crAncho} onChange={setCrAncho} />
+                <Input type="number" label="Alto (m)" value={crAlto} onChange={setCrAlto} />
+              </div>
+              <div className="space-y-3 pt-4 border-t border-[#222]">
+                 <select value={crEspesorFrente} onChange={e => setCrEspesorFrente(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="20mm">Polyfan 20mm</option><option value="30mm">Polyfan 30mm</option></select>
+                 <select value={crExterior} onChange={e => setCrExterior(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="No">Interior</option><option value="Si">Exterior</option></select>
+                 <select value={crLeds} onChange={e => setCrLeds(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3 text-sm text-white outline-none"><option value="No">Sin Luces</option><option value="Si">Con Luz LED</option></select>
+              </div>
+            </div>
+            <div className="w-full md:w-1/2 bg-[#111] rounded-2xl border border-[#333] overflow-hidden p-6">
+               <span className="text-gray-400 text-sm font-bold mt-2">PRECIO FINAL:</span> 
+               <div className="flex items-center mt-2">
+                 <span className="text-[#e2ff00] text-3xl font-black mr-2">$</span>
+                 <input type="number" value={precioAjustado} onChange={(e) => setPrecioAjustado(e.target.value)} className="bg-transparent border-b border-[#333] focus:border-[#e2ff00] text-[#e2ff00] text-4xl font-black w-48 outline-none text-right" />
+               </div>
+            </div>
+         </div>
+      )}
+
+      {modoCotizador === 'Beta' && (
+         <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+            <div className="w-full md:w-[45%] glass-panel border border-purple-500/50 p-6 rounded-[2rem] space-y-4">
+              <h3 className="text-white font-black text-lg uppercase tracking-widest"><IconSparkles /> Motor IA</h3>
+              <Input label="Cliente" value={betaCliente} onChange={setBetaCliente} />
+              <Input label="Trabajo" value={betaTrabajo} onChange={setBetaTrabajo} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input type="number" label="Ancho (m)" value={betaAncho} onChange={setBetaAncho} />
+                <Input type="number" label="Alto (m)" value={betaAlto} onChange={setBetaAlto} />
+              </div>
+              <button onClick={generarPropuestaIA} disabled={generandoIA} className="w-full bg-purple-600 text-white font-black uppercase py-4 rounded-xl mt-4">{generandoIA ? 'Pensando...' : 'Generar Propuesta IA'}</button>
+            </div>
+            <div className="w-full md:w-[55%]">
+               {betaRespuestaIA ? (
+                 <div className="glass-panel border border-[#333] p-8 rounded-[2rem]">
+                    <div className="text-purple-400 text-2xl font-black mb-4">${Number(betaPrecioAjustado).toLocaleString('es-AR')}</div>
+                    <div className="text-gray-300 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: betaRespuestaIA }} />
+                 </div>
+               ) : (
+                 <p className="text-center text-gray-500 mt-10">Esperando datos...</p>
+               )}
+            </div>
+         </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
