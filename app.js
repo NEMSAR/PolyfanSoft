@@ -30,6 +30,10 @@ const IconSparkles = () => <svg width="18" height="18" viewBox="0 0 24 24" fill=
 const IconShield = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
 const IconWrench = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>;
 
+// Íconos para la contraseña
+const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const IconEyeOff = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
+
 function NavButton({ icon, label, active, onClick }) { 
   return ( 
     <button onClick={onClick} className={`flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] transition-all duration-300 ${active ? 'bg-[#222] text-[#e2ff00] shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] md:scale-110 border border-[#444]' : 'text-gray-500 hover:text-gray-300 hover:scale-105'}`}>
@@ -159,12 +163,23 @@ function App() {
 function LoginScreen({ onLogin, showToast }) {
   const [selectedUser, setSelectedUser] = useState(''); 
   const [pass, setPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   
   const handleIngresar = () => { 
     if (pass === PASS_ACCESO) { 
+      setErrorMsg('');
       onLogin(selectedUser); 
       showToast(`¡Sesión iniciada, ${selectedUser}!`); 
-    } else { showToast('Credenciales denegadas', 'error'); } 
+    } else { 
+      setErrorMsg('CONTRASEÑA INCORRECTA. INTENTA NUEVAMENTE.');
+      showToast('Credenciales denegadas', 'error'); 
+    } 
+  };
+
+  const handlePassChange = (e) => {
+    setPass(e.target.value);
+    if (errorMsg) setErrorMsg('');
   };
 
   return (
@@ -184,12 +199,30 @@ function LoginScreen({ onLogin, showToast }) {
           <div className="space-y-5 animate-premium">
             <div className="flex justify-between items-center mb-2">
               <p className="text-gray-400 uppercase text-xs font-bold tracking-widest">Hola, <span className="text-white text-sm">{selectedUser}</span></p>
-              <button onClick={() => setSelectedUser('')} className="text-[9px] bg-[#222] px-3 py-1.5 rounded-full text-gray-400 uppercase font-bold hover:text-white transition-colors">Cambiar</button>
+              <button onClick={() => {setSelectedUser(''); setPass(''); setErrorMsg(''); setShowPass(false);}} className="text-[9px] bg-[#222] px-3 py-1.5 rounded-full text-gray-400 uppercase font-bold hover:text-white transition-colors">Cambiar</button>
             </div>
-            <div className="space-y-1 w-full">
+            
+            <div className="space-y-1 w-full relative">
               <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Clave de Acceso</label>
-              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••••" className="w-full glass-panel bg-black/50 border border-[#333] rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em]" />
+              <div className="relative">
+                <input 
+                  type={showPass ? "text" : "password"} 
+                  value={pass} 
+                  onChange={handlePassChange} 
+                  placeholder="" 
+                  className={`w-full glass-panel bg-black/50 border ${errorMsg ? 'border-red-500' : 'border-[#333]'} rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em] pr-12`} 
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2ff00] transition-colors"
+                >
+                  {showPass ? <IconEyeOff /> : <IconEye />}
+                </button>
+              </div>
+              {errorMsg && <p className="text-red-500 text-[9px] uppercase font-bold tracking-widest text-center mt-2 animate-pop">{errorMsg}</p>}
             </div>
+
             <button onClick={handleIngresar} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-xl mt-4 shadow-[0_0_25px_rgba(226,255,0,0.3)] hover:scale-105 transition-all">Desbloquear Sistema</button>
           </div>
         )}
@@ -345,6 +378,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -397,6 +431,8 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const [cantidadInsumo, setCantidadInsumo] = useState('');
   const [editId, setEditId] = useState(null);
   const [filtroCaja, setFiltroCaja] = useState('Todos');
+  
+  // CORRECCIÓN CRÍTICA: La variable de eliminar ahora existe correctamente en memoria
   const [deleteId, setDeleteId] = useState(null);
 
   const limpiarForm = () => { 
@@ -461,7 +497,8 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const safeFinanzas = finanzas || [];
   const safeInventario = inventario || [];
 
-  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime();
+  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
+  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
@@ -510,6 +547,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       }
   });
 
+  // SIMULADOR EN TIEMPO REAL
   let simMonto = Number(monto) || 0;
   let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
 
@@ -530,6 +568,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
+  // APLICAR FILTRO AL HISTORIAL
   const listInversa = [...listOrdenada].reverse().filter(f => {
      if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
      if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
@@ -599,7 +638,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -678,7 +717,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                       <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-1">
+                    <div>
                       <button onClick={() => cargarParaEditar(f)} className="text-gray-400 hover:text-[#e2ff00] transition-colors p-1"><IconEdit /></button>
                       <button onClick={() => setDeleteId(f.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><IconTrash /></button>
                     </div>
@@ -755,7 +794,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   const guardarPedido = () => {
     if (!cliente || !detalle) return showToast('Faltan datos del cliente', 'error');
-    
     const baseChecklist = { corte: false, lija: false, pintura: false, armado: false };
     
     const data = { 
@@ -856,6 +894,8 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
+  const safeInventario = inventario || []; 
+
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
     .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
@@ -910,7 +950,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   <div key={i} className="flex gap-2 items-center mb-2">
                       <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                           <option value="">Seleccionar Material...</option>
-                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                          {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                       </select>
                       <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                       <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
@@ -966,6 +1006,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
               </div>
               <p className="text-sm md:text-base text-gray-300 my-4 bg-[#0a0a0a]/50 p-4 rounded-xl border border-[#222]/50 leading-relaxed">{p.detalle}</p>
               
+              {/* FUNCION PREMIUM: Checklist Trazabilidad Taller (Sólo En Proceso) */}
               {p.estado === 'En Proceso' && (
                  <div className="mb-4 bg-[#050505]/80 border border-[#333] p-4 rounded-xl">
                     <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconCheck /> Trazabilidad de Taller</p>
@@ -990,6 +1031,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   {p.urlArchivo && <a href={p.urlArchivo} target="_blank" rel="noreferrer" className="text-[10px] md:text-xs text-[#e2ff00] underline break-all hover:text-white transition-colors">Abrir Archivo</a>}
                 </div>
                 
+                {/* FUNCION PREMIUM: Si está completado, muestra generador de Garantía */}
                 <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
                   {p.estado === 'Completado' && (
                      <button onClick={() => exportarRemitoGarantia(p)} className="flex-1 md:flex-none md:w-48 bg-[#111] text-white text-[9px] uppercase font-bold py-3.5 rounded-xl border border-[#444] flex items-center justify-center gap-2 hover:bg-[#222] transition-colors"><IconShield /> Exportar Remito/Garantía</button>
@@ -1013,6 +1055,198 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   );
 }
 
+function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPedidoToEdit }) {
+  const [showForm, setShowForm] = useState(false); 
+  const [filtro, setFiltro] = useState('Todos'); 
+  const [busqueda, setBusqueda] = useState(''); 
+  const [nombre, setNombre] = useState(''); 
+  const [interes, setInteres] = useState(''); 
+  const [estado, setEstado] = useState('Esperando Portfolio'); 
+  const [celular, setCelular] = useState(''); 
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null); 
+
+  const limpiarForm = () => { setNombre(''); setInteres(''); setEstado('Esperando Portfolio'); setCelular(''); setEditId(null); setShowForm(false); };
+
+  const guardarProspecto = () => {
+    if (!nombre || !interes) return showToast('Faltan datos', 'error');
+    const data = { nombre, interes, estado, celular, registradoPor: loggedUser };
+    if (editId) db.collection('prospectos').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); })
+    else db.collection('prospectos').add({...data, fecha: new Date().toISOString()}).then(() => { showToast('Guardado'); limpiarForm(); })
+  };
+
+  const eliminarProspecto = (id) => db.collection('prospectos').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
+  const cargarParaEditar = (p) => { setNombre(p.nombre); setInteres(p.interes); setEstado(p.estado); setCelular(p.celular || ''); setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  
+  const convertirAPedido = (p) => {
+    if (window.confirm('¿El cliente confirmó? Esto lo moverá a Pedidos y abrirá su formulario para completar detalles.')) {
+      db.collection('pedidos').add({ 
+        cliente: p.nombre, detalle: p.interes, prioridad: 'Media', urlArchivo: '', celular: p.celular || '', 
+        precioTotal: 0, sena: 0, estado: 'Pendiente', checklist: { corte: false, lija: false, pintura: false, armado: false }, fecha: new Date().toISOString(), registradoPor: loggedUser 
+      }).then((docRef) => { 
+        db.collection('prospectos').doc(p.id).delete(); 
+        showToast('¡Venta Cerrada!', 'success'); 
+        setPedidoToEdit(docRef.id);
+        setActiveTab('pedidos'); 
+      });
+    }
+  };
+
+  const safeProspectos = prospectos || [];
+  let prospectosFiltrados = safeProspectos.filter(p => (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.interes || '').toLowerCase().includes(busqueda.toLowerCase())).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  if (filtro !== 'Todos') prospectosFiltrados = prospectosFiltrados.filter(p => p.estado === filtro);
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
+        <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(226,255,0,0.15)] hover:scale-[1.02] transition-transform">
+          {showForm ? 'Cerrar Panel' : <><IconUsers /> Nuevo Prospecto</>}
+        </button>
+        {showForm && (
+          <div className={`glass-panel border p-6 rounded-[2rem] space-y-4 animate-premium transition-colors duration-300 ${editId ? 'border-[#e2ff00]' : 'border-[#333]'}`}>
+            <Input label="Nombre o Empresa" value={nombre} onChange={setNombre} />
+            <Input type="number" label="WhatsApp" value={celular} onChange={setCelular} />
+            <div className="space-y-1">
+              <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Estado de la Venta</label>
+              <select value={estado} onChange={e => setEstado(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] appearance-none">
+                <option value="Caliente">🔥 Muy interesado</option><option value="Esperando Portfolio">👀 Esperando ver fotos</option><option value="Frío">❄️ Frío / Pausado</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">¿Qué busca?</label>
+              <textarea className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-[#e2ff00] transition-all" rows="2" value={interes} onChange={e => setInteres(e.target.value)}></textarea>
+            </div>
+            <div className="flex gap-3 pt-2">
+              {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+              <button onClick={guardarProspecto} className="w-full bg-white text-black font-bold uppercase py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all">Guardar Lead</button>
+            </div>
+          </div>
+        )}
+        <input type="text" placeholder="Buscar prospectos..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full glass-panel bg-[#111]/80 border border-[#333] rounded-2xl py-3.5 text-sm text-white focus:border-[#e2ff00] outline-none transition-all search-input" />
+        <div className="flex flex-col bg-[#111] p-1.5 rounded-2xl border border-[#333] gap-1">
+          {['Todos', 'Caliente', 'Esperando Portfolio', 'Frío'].map(f => (
+            <button key={f} onClick={() => setFiltro(f)} className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtro === f ? 'bg-[#2a2a2a] text-white shadow-md border border-[#444]' : 'text-gray-500 hover:text-gray-300'}`}>{f}</button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="w-full md:w-[60%] lg:w-[65%] grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {prospectosFiltrados.map((p, i) => (
+          <div key={p.id} className={`glass-panel p-5 md:p-6 rounded-3xl border transition-all animate-stagger flex flex-col justify-between ${p.estado === 'Caliente' ? 'border-red-500/50 bg-red-900/10' : p.estado === 'Esperando Portfolio' ? 'border-yellow-500/50 bg-yellow-900/10' : 'border-[#333] opacity-70 hover:opacity-100'}`} style={{animationDelay: `${i * 0.05}s`}}>
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-xl text-white">{p.nombre}</h3>
+                <div className="flex gap-1.5">
+                  <button onClick={() => cargarParaEditar(p)} className="text-gray-400 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                  <button onClick={() => eliminarProspecto(p.id)} className="text-gray-400 hover:text-red-500 p-1.5"><IconTrash /></button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-300 mb-4 mt-2 bg-[#0a0a0a]/50 p-3 rounded-xl border border-[#222]/50">{p.interes}</p>
+            </div>
+            <div className="flex gap-2 mt-auto">
+              <button onClick={() => window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
+              <button onClick={() => convertirAPedido(p)} className="flex-1 bg-[#e2ff00]/10 text-[#e2ff00] text-[9px] uppercase font-black py-3 rounded-xl border border-[#e2ff00]/30 hover:bg-[#e2ff00]/20 transition-colors">Venta Cerrada</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InventarioView({ inventario, showToast }) {
+  const [showForm, setShowForm] = useState(false); 
+  const [busqueda, setBusqueda] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('Todas');
+  const [nombre, setNombre] = useState(''); 
+  const [cantidad, setCantidad] = useState(''); 
+  const [costoUnitario, setCostoUnitario] = useState(''); 
+  const [categoria, setCategoria] = useState('Planchas Polyfan'); 
+  const [unidad, setUnidad] = useState('Unidades'); 
+  const [minimoCritico, setMinimoCritico] = useState('2'); 
+  const [editId, setEditId] = useState(null);
+
+  const limpiarForm = () => { setNombre(''); setCantidad(''); setCostoUnitario(''); setCategoria('Planchas Polyfan'); setUnidad('Unidades'); setMinimoCritico('2'); setEditId(null); setShowForm(false); };
+  
+  const guardarItem = () => {
+    if (!nombre || !cantidad) return showToast('Completá los datos', 'error');
+    const data = { nombre, categoria, unidad, cantidad: Number(cantidad), costoUnitario: Number(costoUnitario) || 0, minimoCritico: Number(minimoCritico) };
+    if (editId) db.collection('inventario').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
+    else db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
+  };
+
+  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
+  const cargarParaEditar = (item) => { setNombre(item.nombre); setCantidad(item.cantidad); setCostoUnitario(item.costoUnitario || ''); setCategoria(item.categoria || 'Planchas Polyfan'); setUnidad(item.unidad || 'Unidades'); setMinimoCritico(item.minimoCritico || '2'); setEditId(item.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
+  
+  const safeInventario = inventario || [];
+  let inventarioFiltrado = safeInventario.filter(i => (i.nombre || '').toLowerCase().includes(busqueda.toLowerCase()));
+  if (categoriaFiltro !== 'Todas') inventarioFiltrado = inventarioFiltrado.filter(i => i.categoria === categoriaFiltro);
+  
+  const categoriasUnicas = ['Todas', ...new Set(safeInventario.map(i => i.categoria || 'General'))];
+  const valorTotalInventario = safeInventario.reduce((sum, item) => sum + (Number(item.cantidad) * Number(item.costoUnitario || 0)), 0);
+
+  return (
+    <div className="w-full flex flex-col md:flex-row gap-8 items-start">
+      <div className="w-full md:w-[40%] lg:w-[35%] space-y-5 flex-shrink-0 md:sticky md:top-10">
+        <div className="glass-panel bg-[#111]/80 border border-[#333] rounded-[1.5rem] p-5 text-center shadow-lg">
+            <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-1">Valor Patrimonial del Stock</span><br/>
+            <span className="text-3xl font-black text-[#e2ff00]">${valorTotalInventario.toLocaleString('es-AR')}</span>
+        </div>
+        <button onClick={() => { if(showForm) limpiarForm(); else setShowForm(true); }} className="w-full glass-panel border border-[#333] text-white font-black uppercase py-4 rounded-[1.25rem] flex justify-center items-center gap-2 hover:bg-[#111] shadow-lg">
+          {showForm ? 'Cerrar Gestor' : <><IconPlus /> Administrar Insumo</>}
+        </button>
+        {showForm && (
+          <div className="glass-panel border border-[#e2ff00] p-6 rounded-[2rem] space-y-4">
+            <Input label="Nombre del Insumo" value={nombre} onChange={setNombre} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1 w-full"><label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Categoría</label><select value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none"><option>Planchas Polyfan</option><option>Pinturas / Aerosoles</option><option>Pegamentos / Siliconas</option><option>Electrónica / LED</option><option>Insumos 3D</option><option>Varios</option></select></div>
+              <div className="space-y-1 w-full"><label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Medida</label><select value={unidad} onChange={e => setUnidad(e.target.value)} className="w-full glass-panel bg-[#0a0a0a]/80 border border-[#333] rounded-xl p-4 text-white outline-none"><option>Unidades</option><option>Metros</option><option>Litros</option><option>Gramos</option></select></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Input type="number" label="Cant. Real" value={cantidad} onChange={setCantidad} />
+              <Input type="number" label="Alerta Min." value={minimoCritico} onChange={setMinimoCritico} />
+              <Input type="number" label="Costo U. ($)" value={costoUnitario} onChange={setCostoUnitario} />
+            </div>
+            <button onClick={guardarItem} className="w-full bg-[#e2ff00] text-black font-black uppercase tracking-wider py-4 rounded-xl mt-2">Guardar Insumo</button>
+          </div>
+        )}
+        <input type="text" placeholder="Buscar material..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full glass-panel bg-[#111]/80 border border-[#333] rounded-2xl py-3.5 px-4 text-sm text-white outline-none" />
+        <div className="flex flex-wrap gap-2">
+           {categoriasUnicas.map(cat => <button key={cat} onClick={() => setCategoriaFiltro(cat)} className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${categoriaFiltro === cat ? 'bg-[#e2ff00] text-black' : 'bg-[#111] text-gray-400 border border-[#333] hover:text-white'}`}>{cat}</button>)}
+        </div>
+      </div>
+
+      <div className="w-full md:w-[60%] lg:w-[65%] grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {inventarioFiltrado.map((item, i) => (
+          <div key={item.id} className={`glass-panel p-5 rounded-2xl flex flex-col justify-between ${Number(item.cantidad) <= (Number(item.minimoCritico) || 0) ? 'border-red-500/50 bg-red-900/10' : 'border-[#333]'}`}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="pr-2"><p className="font-bold text-lg text-white leading-tight">{item.nombre}</p><p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mt-1">{item.categoria}</p></div>
+              <div className="flex gap-1.5 items-center">
+                <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                <button onClick={() => eliminarItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
+              </div>
+            </div>
+            {Number(item.costoUnitario) > 0 && (
+                <div className="mb-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest border-b border-[#222] pb-2">
+                    Costo U: <span className="text-white">${item.costoUnitario}</span> | Total: <span className="text-[#e2ff00]">${(item.costoUnitario * item.cantidad).toLocaleString('es-AR')}</span>
+                </div>
+            )}
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex items-center gap-1 bg-[#0a0a0a] p-1 rounded-xl border border-[#222]">
+                <button onClick={() => actualizarCantidad(item.id, item.cantidad, -1)} className="w-8 h-8 font-bold text-xl text-gray-500 hover:text-white">-</button>
+                <span className="text-xl font-black min-w-[3.5rem] text-center text-[#e2ff00]">{item.cantidad}</span>
+                <button onClick={() => actualizarCantidad(item.id, item.cantidad, 1)} className="w-8 h-8 font-bold text-xl text-gray-500 hover:text-white">+</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- VISTA PRESUPUESTO (RESTAURADO COMPLETO + FUNCIONES PREMIUM) ---
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
   const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
@@ -1210,7 +1444,7 @@ function PresupuestoView({ showToast, loggedUser }) {
             <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
           </div>
           <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
-          <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
+          <p style="font-size: 11px; color: #666; font-weight: bold; margin: top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
         </div>
       `;
       const element = document.createElement('div'); element.innerHTML = ticketHTML; 
@@ -1274,20 +1508,6 @@ function PresupuestoView({ showToast, loggedUser }) {
     if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
     let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
     window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(texto), "_blank");
-  };
-
-  const guardarComoLead = () => {
-    if(!betaCliente || !betaTrabajo) return showToast("Faltan datos del cliente/trabajo", "error");
-    db.collection('prospectos').add({
-      nombre: betaCliente,
-      interes: `Propuesta IA generada: ${betaTrabajo} (${betaAncho}x${betaAlto}m). Precio estimado: $${betaPrecioAjustado}`,
-      estado: 'Caliente',
-      celular: '',
-      fecha: new Date().toISOString(),
-      registradoPor: loggedUser || 'Sistema IA'
-    }).then(() => {
-      showToast('¡Lead guardado en el sistema!', 'success');
-    }).catch(() => showToast('Error al guardar', 'error'));
   };
 
   return (
