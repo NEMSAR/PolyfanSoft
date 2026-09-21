@@ -47,7 +47,6 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -396,8 +395,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const [cantidadInsumo, setCantidadInsumo] = useState('');
   const [editId, setEditId] = useState(null);
   const [filtroCaja, setFiltroCaja] = useState('Todos');
-  
-  // CORRECCIÓN CRÍTICA: La variable de eliminar ahora existe correctamente en memoria
   const [deleteId, setDeleteId] = useState(null);
 
   const limpiarForm = () => { 
@@ -470,7 +467,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const listOrdenada = [...safeFinanzas].sort((a,b) => {
       const tA = a.fecha ? new Date(a.fecha).getTime() : 0;
       const tB = b.fecha ? new Date(b.fecha).getTime() : 0;
-      // Si la fecha es inválida, se evita el choque matemático
       return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
   });
   
@@ -604,7 +600,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -745,7 +741,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   const procesarDescuentoInventario = () => {
       insumosUsados.forEach(ins => {
-          if (ins.idInsumo && Number(ins.cantidad) > 0) {
+          if (ins.idInsumo && (Number(ins.cantidad)||0) > 0) {
              const itemRef = db.collection('inventario').doc(ins.idInsumo);
              itemRef.get().then(doc => {
                  if (doc.exists) {
@@ -760,7 +756,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   const guardarPedido = () => {
     if (!cliente || !detalle) return showToast('Faltan datos del cliente', 'error');
-    // Inicializamos el checklist premium para trazabilidad
     const baseChecklist = { corte: false, lija: false, pintura: false, armado: false };
     
     const data = { 
@@ -784,7 +779,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     db.collection('pedidos').doc(id).update({ estado: nextEstado }).then(() => showToast(`Movido a: ${nextEstado}`));
   };
 
-  // FUNCIÓN PREMIUM: Toggle Checklist
   const toggleChecklist = (id, currentChecklist, taskField) => {
     const updated = { ...currentChecklist, [taskField]: !currentChecklist[taskField] };
     db.collection('pedidos').doc(id).update({ checklist: updated });
@@ -808,7 +802,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
   };
 
-  // FUNCIÓN PREMIUM: Exportador de Remito de Garantía
   const exportarRemitoGarantia = (p) => {
      setGenerandoRemito(true);
      const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
@@ -1134,7 +1127,6 @@ function InventarioView({ inventario, showToast }) {
   const [unidad, setUnidad] = useState('Unidades'); 
   const [minimoCritico, setMinimoCritico] = useState('2'); 
   const [editId, setEditId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null); 
 
   const limpiarForm = () => { setNombre(''); setCantidad(''); setCostoUnitario(''); setCategoria('Planchas Polyfan'); setUnidad('Unidades'); setMinimoCritico('2'); setEditId(null); setShowForm(false); };
   
@@ -1145,7 +1137,7 @@ function InventarioView({ inventario, showToast }) {
     else db.collection('inventario').add(data).then(() => { showToast('Agregado'); limpiarForm(); });
   };
 
-  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> { showToast('Eliminado'); setDeleteId(null); });
+  const eliminarItem = (id) => db.collection('inventario').doc(id).delete().then(()=> showToast('Eliminado'));
   const cargarParaEditar = (item) => { setNombre(item.nombre); setCantidad(item.cantidad); setCostoUnitario(item.costoUnitario || ''); setCategoria(item.categoria || 'Planchas Polyfan'); setUnidad(item.unidad || 'Unidades'); setMinimoCritico(item.minimoCritico || '2'); setEditId(item.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const actualizarCantidad = (id, actual, delta) => { const n = (Number(actual) + delta).toFixed(2); if (n >= 0) db.collection('inventario').doc(id).update({ cantidad: Number(n) }); };
   
@@ -1154,7 +1146,7 @@ function InventarioView({ inventario, showToast }) {
   if (categoriaFiltro !== 'Todas') inventarioFiltrado = inventarioFiltrado.filter(i => i.categoria === categoriaFiltro);
   
   const categoriasUnicas = ['Todas', ...new Set(safeInventario.map(i => i.categoria || 'General'))];
-  const valorTotalInventario = safeInventario.reduce((sum, item) => sum + (Number(item.cantidad) * Number(item.costoUnitario || 0)), 0);
+  const valorTotalInventario = safeInventario.reduce((sum, item) => sum + ((Number(item.cantidad)||0) * (Number(item.costoUnitario) || 0)), 0);
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
@@ -1193,17 +1185,8 @@ function InventarioView({ inventario, showToast }) {
             <div className="flex justify-between items-start mb-4">
               <div className="pr-2"><p className="font-bold text-lg text-white leading-tight">{item.nombre}</p><p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mt-1">{item.categoria}</p></div>
               <div className="flex gap-1.5 items-center">
-                {deleteId === item.id ? (
-                  <div className="flex gap-1 items-center bg-[#111] border border-[#222] p-1.5 rounded-lg">
-                    <button onClick={() => eliminarItem(item.id)} className="bg-red-600 text-white font-bold text-[9px] px-2 py-1.5 rounded hover:bg-red-500 transition-colors">Confirmar</button>
-                    <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
-                  </div>
-                ) : (
-                  <>
-                    <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
-                    <button onClick={() => setDeleteId(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
-                  </>
-                )}
+                <button onClick={() => cargarParaEditar(item)} className="text-gray-500 hover:text-[#e2ff00] p-1.5"><IconEdit /></button>
+                <button onClick={() => eliminarItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5"><IconTrash /></button>
               </div>
             </div>
             {Number(item.costoUnitario) > 0 && (
@@ -1234,33 +1217,77 @@ function PresupuestoView({ showToast, loggedUser }) {
   const AREA_PLACA = 0.72;
 
   // ESTADOS EXPRESS
-  const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
+  const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [crDiseno, setCrDiseno] = useState('No'); const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
 
-  const m2Totales = (Number(crAncho) * Number(crAlto)) || 0; 
-  let placasEstimadasFrente = m2Totales > 0 ? Math.ceil((m2Totales * (crDensidad === '100' ? 1 : crDensidad === '65' ? 1.4 : 1.8)) / AREA_PLACA) : 0;
-  let costoPlacasRapido = placasEstimadasFrente * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] + COSTOS_EXPRESS.gananciaPorPlaca);
-  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') { costoPlacasRapido += Math.ceil((m2Totales * 1.2) / AREA_PLACA) * (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] + COSTOS_EXPRESS.gananciaPorPlaca); }
+  const m2Totales = (parseFloat(crAncho) || 0) * (parseFloat(crAlto) || 0); 
+  let placasEstimadasFrente = 0;
+  if (m2Totales > 0) {
+    if (crDensidad === '100') {
+      const op1 = Math.ceil((parseFloat(crAncho) || 0) / 1.20) * Math.ceil((parseFloat(crAlto) || 0) / 0.60);
+      const op2 = Math.ceil((parseFloat(crAncho) || 0) / 0.60) * Math.ceil((parseFloat(crAlto) || 0) / 1.20);
+      placasEstimadasFrente = Math.min(op1, op2);
+    } else if (crDensidad === '65') {
+      placasEstimadasFrente = Math.ceil((m2Totales * 1.4) / AREA_PLACA);
+    } else {
+      placasEstimadasFrente = Math.ceil((m2Totales * 1.8) / AREA_PLACA);
+    }
+  }
   
-  let horasEstimadas = m2Totales * Number(crComplejidad) + (crExterior === 'Si' ? m2Totales * 1.5 : 0) + (crLeds === 'Si' ? m2Totales * 3 : 0) + (crEspesorFondo !== 'Ninguno' ? m2Totales * 1.5 : 0);
-  let subtotalRapido = costoPlacasRapido + (horasEstimadas * COSTOS_EXPRESS.valorHora) + (costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3)) + (crLeds === 'Si' ? (((Number(crAncho) + Number(crAlto)) * 3 * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente + (Math.ceil(m2Totales * 12) * COSTOS_EXPRESS.costoSoporte3D)) : 0) + (crInstalacion === 'Instalación Básica' ? COSTOS_EXPRESS.instalacionBasica : crInstalacion === 'Compleja / Altura' ? COSTOS_EXPRESS.instalacionAltura : 0);
+  let precioPlacaFrenteExpress = (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFrente] || 0) + COSTOS_EXPRESS.gananciaPorPlaca;
+  let costoPlacasRapido = placasEstimadasFrente * precioPlacaFrenteExpress;
   
-  useEffect(() => { setPrecioAjustado(subtotalRapido * 2); }, [subtotalRapido]);
+  let placasEstimadasFondo = 0;
+  if (m2Totales > 0 && crEspesorFondo !== 'Ninguno') {
+    const op1 = Math.ceil((parseFloat(crAncho) || 0) / 1.20) * Math.ceil((parseFloat(crAlto) || 0) / 0.60);
+    const op2 = Math.ceil((parseFloat(crAncho) || 0) / 0.60) * Math.ceil((parseFloat(crAlto) || 0) / 1.20);
+    placasEstimadasFondo = Math.min(op1, op2);
+    let precioPlacaFondoExpress = (COSTOS_EXPRESS.costoPlacaNeto[crEspesorFondo] || 0) + COSTOS_EXPRESS.gananciaPorPlaca;
+    costoPlacasRapido += (placasEstimadasFondo * precioPlacaFondoExpress); 
+  }
+  
+  let horasEstimadas = m2Totales * parseFloat(crComplejidad || 0); 
+  if(crExterior === 'Si') horasEstimadas += m2Totales * 1.5; 
+  if(crLeds === 'Si') horasEstimadas += m2Totales * 3; 
+  if(crEspesorFondo !== 'Ninguno') horasEstimadas += m2Totales * 1.5; 
+  
+  const costoTallerRapido = horasEstimadas * COSTOS_EXPRESS.valorHora;
+  let costoInsumosRapido = costoPlacasRapido * (crExterior === 'Si' ? 0.6 : 0.3);
+  
+  let costoLedTotal = 0; let costo3DTotal = 0;
+  if(crLeds === 'Si') { 
+    const perimetroAprox = ((parseFloat(crAncho) || 0) + (parseFloat(crAlto) || 0)) * 2 * 1.5; 
+    costoLedTotal = (perimetroAprox * COSTOS_EXPRESS.precioMetroLed) + COSTOS_EXPRESS.precioFuente; 
+    const cantSoportes3D = Math.ceil(m2Totales * 12); 
+    costo3DTotal = cantSoportes3D * COSTOS_EXPRESS.costoSoporte3D; 
+  }
+  
+  let costoColocacion = 0; 
+  if(crInstalacion === 'Instalación Básica') costoColocacion = COSTOS_EXPRESS.instalacionBasica; 
+  if(crInstalacion === 'Compleja / Altura') costoColocacion = COSTOS_EXPRESS.instalacionAltura;
+  
+  const costoDisenoRapido = crDiseno === 'Si' ? 25000 : 0;
+  const subtotalRapido = costoPlacasRapido + costoTallerRapido + costoInsumosRapido + costoLedTotal + costo3DTotal + costoColocacion; 
+  const precioSugeridoRapido = (subtotalRapido * 2) + costoDisenoRapido;
+
+  useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
 
   // ESTADOS BETA AI
-  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
+  const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaDiseno, setBetaDiseno] = useState('No'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
 
   useEffect(() => {
-     let cPlacas = betaPlacas.reduce((acc, p) => acc + (Number(p.cantidad) > 0 ? Number(p.cantidad) * (COSTOS_BETA.costoPlacaNeto[p.espesor] + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
-     let subB = cPlacas + COSTOS_BETA.fijoPintura + COSTOS_BETA.fijoLuzMaquinas + COSTOS_BETA.fijoManoDeObra + COSTOS_BETA.fijoPegamento + (betaVinilo === 'Si' ? ((Number(betaAncho)*Number(betaAlto)) * COSTOS_BETA.precioViniloM2) : 0) + (betaExterior === 'Si' ? COSTOS_BETA.adicionalExterior : 0) + (betaLuz === 'Si' ? (Number(betaMetrosLed) * COSTOS_BETA.precioMetroLed) + (Number(betaMetrosCable) * COSTOS_BETA.precioMetroCable) + COSTOS_BETA.fijoSoportes3D + COSTOS_BETA.fijoFuenteLuz : 0) + (betaInstalacion === 'Altura' ? COSTOS_BETA.instalacionAltura : betaInstalacion === 'Normal' ? COSTOS_BETA.instalacionNormal : 0);
+     let cPlacas = betaPlacas.reduce((acc, p) => acc + ((parseFloat(p.cantidad) || 0) > 0 ? (parseFloat(p.cantidad) || 0) * ((COSTOS_BETA.costoPlacaNeto[p.espesor] || 0) + COSTOS_BETA.gananciaPorPlaca) : 0), 0);
+     let m2BetaSafe = (parseFloat(betaAncho)||0) * (parseFloat(betaAlto)||0);
+     const costoDisenoBeta = betaDiseno === 'Si' ? 25000 : 0;
+     let subB = cPlacas + COSTOS_BETA.fijoPintura + COSTOS_BETA.fijoLuzMaquinas + COSTOS_BETA.fijoManoDeObra + COSTOS_BETA.fijoPegamento + (betaVinilo === 'Si' ? (m2BetaSafe * COSTOS_BETA.precioViniloM2) : 0) + (betaExterior === 'Si' ? COSTOS_BETA.adicionalExterior : 0) + (betaLuz === 'Si' ? ((parseFloat(betaMetrosLed)||0) * COSTOS_BETA.precioMetroLed) + ((parseFloat(betaMetrosCable)||0) * COSTOS_BETA.precioMetroCable) + COSTOS_BETA.fijoSoportes3D + COSTOS_BETA.fijoFuenteLuz : 0) + (betaInstalacion === 'Altura' ? COSTOS_BETA.instalacionAltura : betaInstalacion === 'Normal' ? COSTOS_BETA.instalacionNormal : 0) + costoDisenoBeta;
      setBetaPrecioAjustado(subB);
-  }, [betaPlacas, betaAncho, betaAlto, betaVinilo, betaExterior, betaLuz, betaMetrosLed, betaMetrosCable, betaInstalacion]);
+  }, [betaPlacas, betaAncho, betaAlto, betaVinilo, betaExterior, betaLuz, betaMetrosLed, betaMetrosCable, betaInstalacion, betaDiseno]);
 
   const handleAddBetaPlaca = () => setBetaPlacas([...betaPlacas, { id: Date.now(), espesor: '20mm', cantidad: '' }]);
   const handleRemoveBetaPlaca = (id) => setBetaPlacas(betaPlacas.filter(p => p.id !== id));
   const handleUpdateBetaPlaca = (id, field, value) => setBetaPlacas(betaPlacas.map(p => p.id === id ? { ...p, [field]: value } : p));
 
   const generarPropuestaIA = () => {
-     const placasValidas = betaPlacas.filter(p => Number(p.cantidad) > 0);
+     const placasValidas = betaPlacas.filter(p => (parseFloat(p.cantidad)||0) > 0);
      if(!betaCliente || !betaTrabajo || placasValidas.length === 0 || !betaAncho || !betaAlto) {
          return showToast("Completá cliente, trabajo, medidas y al menos 1 placa", "error");
      }
@@ -1272,9 +1299,10 @@ function PresupuestoView({ showToast, loggedUser }) {
      "Trabajo: " + betaTrabajo + "\n" +
      "Medidas: " + betaAncho + "m (ancho) x " + betaAlto + "m (alto).\n" +
      "Material corpóreo: " + detallePlacasIA + ".\n" +
+     "Requiere servicio de diseño/vectorización: " + (betaDiseno === 'Si' ? "Sí, incluir este servicio." : "No, el cliente provee archivo listo.") + ".\n" +
      "Preparación para exterior: " + betaExterior + ".\n" +
      "Lleva Vinilo impreso de alta calidad: " + betaVinilo + ".\n" +
-     "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? " (SÍ LLEVA: Incluye " + betaMetrosLed + "m de tira LED, " + betaMetrosCable + "m de cable cristal, soportes 3D y fuente)" : " (NO LLEVA LUZ)") + ".\n" +
+     "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? ` (SÍ LLEVA: Incluye ${betaMetrosLed}m de tira LED, ${betaMetrosCable}m de cable cristal, soportes 3D y fuente)` : " (NO LLEVA LUZ)") + ".\n" +
      "Nivel de Instalación: " + betaInstalacion + ".";
 
      fetch(URL_BACKEND_GAS, {
@@ -1329,6 +1357,66 @@ function PresupuestoView({ showToast, loggedUser }) {
         setDescargandoBeta(false); window.scrollTo(0, posPrevia); document.body.removeChild(element); showToast('¡Imagen descargada!');
       });
     }, 800);
+  };
+
+  const exportarTicketRapido = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error"); 
+    setDescargandoExpress(true);
+    setTimeout(() => {
+      let ticketHTML = `
+        <div id="ticket-rapido" style="font-family: Arial, sans-serif; padding: 40px; color: #111; width: 450px; background-color: #ffffff; box-sizing: border-box; text-align: center;">
+          <img src="${TICKET_LOGO_URL}" style="max-height: 60px; margin-bottom: 10px;" crossorigin="anonymous" />
+          <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">EXPRESS BUDGETER SYSTEM 3.0</h2>
+          <div style="border-top: 2px dashed #ddd; border-bottom: 2px dashed #ddd; padding: 20px 0; margin-top: 20px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Dimensiones:</span><span style="font-weight: bold;">${crAncho}m x ${crAlto}m</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Frente / Letras:</span><span style="font-weight: bold;">Polyfan ${crEspesorFrente}</span>
+            </div>
+            ${crEspesorFondo !== 'Ninguno' ? `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Fondo / Base:</span><span style="font-weight: bold;">Polyfan ${crEspesorFondo}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Tratamiento:</span><span style="font-weight: bold;">${crExterior === 'Si' ? 'Apto Exterior' : 'Interior'}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Iluminación:</span><span style="font-weight: bold;">${crLeds === 'Si' ? 'Con LED + Soportes 3D' : 'Sin Luces'}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: #666;">Colocación:</span><span style="font-weight: bold;">${crInstalacion}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #666;">Diseño y Vectorización:</span><span style="font-weight: bold;">${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}</span>
+            </div>
+          </div>
+          <div style="background: #000; color: #fff; padding: 20px; border-radius: 15px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
+            <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
+          </div>
+          <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
+          <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
+        </div>
+      `;
+      const element = document.createElement('div'); element.innerHTML = ticketHTML; 
+      element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
+      document.body.appendChild(element);
+      
+      window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 450 }).then(canvas => {
+        const link = document.createElement('a'); link.download = `Presupuesto_Express.png`; link.href = canvas.toDataURL('image/png'); link.click();
+        showToast('Ticket generado'); setDescargandoExpress(false); document.body.removeChild(element);
+      });
+    }, 300);
+  };
+
+  const enviarWhatsAppEstimacion = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error");
+    let textoEspesores = `Polyfan ${crEspesorFrente}`;
+    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
+    let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(texto), "_blank");
   };
 
   const guardarComoLead = () => {
@@ -1419,6 +1507,13 @@ function PresupuestoView({ showToast, loggedUser }) {
                 <select value={crInstalacion} onChange={e => setCrInstalacion(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none appearance-none">
                   <option value="Sin colocación">Sin Colocación</option><option value="Instalación Básica">Instalación Básica</option><option value="Compleja / Altura">Instalación Altura / Compleja</option>
                 </select>
+                <div className="space-y-1 w-full pt-2">
+                  <label className="text-[9px] text-[#e2ff00] uppercase font-bold tracking-widest ml-1">¿Requiere Diseño / Vectorización?</label>
+                  <select value={crDiseno} onChange={e => setCrDiseno(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-[#e2ff00] appearance-none">
+                    <option value="No">No (Cliente envía vector)</option>
+                    <option value="Si">Sí (+ $25.000)</option>
+                  </select>
+                </div>
               </div>
               <div className="space-y-3 pt-4 border-t border-[#222]">
                 <div className="space-y-1">
@@ -1563,6 +1658,14 @@ function PresupuestoView({ showToast, loggedUser }) {
                 </select>
               </div>
               
+              <div className="space-y-1 w-full pt-2">
+                <label className="text-[9px] text-purple-400 uppercase font-bold tracking-widest ml-1">¿Requiere Diseño / Vectorización?</label>
+                <select value={betaDiseno} onChange={e => setBetaDiseno(e.target.value)} className="w-full glass-panel bg-[#111] border border-[#333] rounded-xl p-3.5 text-sm text-white outline-none focus:border-purple-500 appearance-none">
+                  <option value="No">No (Cliente envía vector)</option>
+                  <option value="Si">Sí (+ $25.000)</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Tiempo Estimado" value={betaTiempo} onChange={setBetaTiempo} placeholder="10 a 15 días" />
                 <Input label="Formas de Pago" value={betaPagos} onChange={setBetaPagos} placeholder="50% anticipo" />
