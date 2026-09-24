@@ -1,5 +1,4 @@
 const { useState, useEffect, useMemo, useRef } = React;
-// REGLA CRÍTICA: Traemos la base de datos
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
@@ -51,7 +50,6 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -367,7 +365,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -424,13 +421,10 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeInventario = inventario || [];
 
-  // FUNCIONALIDAD: Autocompletado del nombre al seleccionar insumo
   useEffect(() => {
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
         const ins = safeInventario.find(i => i.id === idInsumo);
-        if (ins) {
-            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
-        }
+        if (ins) setConcepto(`Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
     }
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
@@ -511,8 +505,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
-  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
-  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
+  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); 
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
@@ -561,7 +554,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       }
   });
 
-  // SIMULADOR EN TIEMPO REAL
   let simMonto = Number(monto) || 0;
   let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
 
@@ -582,7 +574,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
-  // APLICAR FILTRO AL HISTORIAL
   const listInversa = [...listOrdenada].reverse().filter(f => {
      if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
      if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
@@ -652,7 +643,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -674,7 +665,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
-        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -1409,22 +1399,7 @@ function PresupuestoView({ showToast, loggedUser }) {
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
          
-         let modeloElegido = "gemini-pro"; 
-         try {
-            const resMod = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY);
-            if (resMod.ok) {
-                const dataMod = await resMod.json();
-                if(dataMod.models) {
-                    const modelosValidos = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                    const optimo = modelosValidos.find(m => m.name === "models/gemini-1.5-flash") || 
-                                   modelosValidos.find(m => m.name === "models/gemini-1.5-flash-latest") || 
-                                   modelosValidos.find(m => m.name === "models/gemini-1.5-pro") || 
-                                   modelosValidos.find(m => m.name === "models/gemini-pro") ||
-                                   modelosValidos[0];
-                    if(optimo) modeloElegido = optimo.name.replace('models/', '');
-                }
-            }
-         } catch(e) { console.warn("Fallo al listar modelos, usando fallback", e); }
+         const modeloElegido = "gemini-1.5-flash"; 
 
          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloElegido}:generateContent?key=${API_KEY}`;
          
@@ -1499,7 +1474,7 @@ function PresupuestoView({ showToast, loggedUser }) {
 
   const copiarPropuestaTextoBeta = () => {
     if(!betaRespuestaIA) return showToast("Generá la propuesta primero", "error");
-    const textoLimpio = betaRespuestaIA.replace(/<[^>]*>?/gm, ''); // Quita etiquetas HTML
+    const textoLimpio = betaRespuestaIA.replace(/<[^>]*>?/gm, ''); 
     const textoCopiar = `*PROPUESTA DE PROYECTO - POLYFANTECH*\n\n${textoLimpio}\n\n*Tiempo de entrega:* ${betaTiempo}\n*Formas de pago:* ${betaPagos}\n*PRECIO FINAL:* $${Number(betaPrecioAjustado).toLocaleString('es-AR')}`;
     navigator.clipboard.writeText(textoCopiar).then(() => {
         showToast("Texto copiado al portapapeles");
@@ -1558,6 +1533,16 @@ function PresupuestoView({ showToast, loggedUser }) {
     }, 300);
   };
 
+  const copiarPropuestaTextoRapido = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error");
+    let textoEspesores = `Polyfan ${crEspesorFrente}`;
+    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
+    const textoCopiar = `*PRESUPUESTO - POLYFANTECH*\n\n*Medidas:* ${crAncho}m x ${crAlto}m\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*PRECIO FINAL:* $${Number(precioAjustado).toLocaleString('es-AR')}`;
+    navigator.clipboard.writeText(textoCopiar).then(() => {
+        showToast("Texto copiado al portapapeles");
+    });
+  };
+
   const exportarOrdenTrabajoInterna = () => {
     if(!m2Totales) return showToast("Faltan medidas", "error"); 
     setDescargandoExpress(true);
@@ -1608,16 +1593,6 @@ function PresupuestoView({ showToast, loggedUser }) {
     if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
     let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
     window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(texto), "_blank");
-  };
-
-  const copiarPropuestaTextoRapido = () => {
-    if(!m2Totales) return showToast("Faltan medidas", "error");
-    let textoEspesores = `Polyfan ${crEspesorFrente}`;
-    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
-    const textoCopiar = `*PRESUPUESTO - POLYFANTECH*\n\n*Medidas:* ${crAncho}m x ${crAlto}m\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*PRECIO FINAL:* $${Number(precioAjustado).toLocaleString('es-AR')}`;
-    navigator.clipboard.writeText(textoCopiar).then(() => {
-        showToast("Texto copiado al portapapeles");
-    });
   };
 
   const guardarComoLead = () => {
