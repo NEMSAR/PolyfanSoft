@@ -506,7 +506,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
-  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime();
+  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
@@ -666,6 +666,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
+        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -899,6 +900,8 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
+  const safeInventario = inventario || []; 
+
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
     .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
@@ -953,7 +956,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   <div key={i} className="flex gap-2 items-center mb-2">
                       <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                           <option value="">Seleccionar Material...</option>
-                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                          {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                       </select>
                       <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                       <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
@@ -1250,7 +1253,6 @@ function InventarioView({ inventario, showToast }) {
 
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
-  const URL_BACKEND_GAS = "PEGAR_URL_DE_APPS_SCRIPT_AQUI"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
@@ -1260,16 +1262,6 @@ function PresupuestoView({ showToast, loggedUser }) {
   const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [crDiseno, setCrDiseno] = useState('No'); 
   const [crMetrosLed, setCrMetrosLed] = useState(''); const [crMetrosCable, setCrMetrosCable] = useState('');
   const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
-
-  useEffect(() => {
-     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
-     if (w > 0 && h > 0) {
-        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
-        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
-     } else {
-        setCrMetrosLed(''); setCrMetrosCable('');
-     }
-  }, [crAncho, crAlto]);
 
   const m2Totales = (parseFloat(crAncho) || 0) * (parseFloat(crAlto) || 0); 
   let multiplicadorMerma = crDensidad === '100' ? 1.3 : (crDensidad === '65' ? 1.1 : 0.8);
@@ -1308,6 +1300,16 @@ function PresupuestoView({ showToast, loggedUser }) {
   const precioSugeridoRapido = (subtotalRapido * 2) + costoDisenoRapido;
 
   useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
+
+  useEffect(() => {
+     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
+     if (w > 0 && h > 0) {
+        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
+        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
+     } else {
+        setCrMetrosLed(''); setCrMetrosCable('');
+     }
+  }, [crAncho, crAlto]);
 
   // ESTADOS BETA AI
   const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaDiseno, setBetaDiseno] = useState('No'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
@@ -1399,16 +1401,19 @@ function PresupuestoView({ showToast, loggedUser }) {
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
          
-         let modeloElegido = "gemini-1.5-flash";
+         let modeloElegido = "gemini-1.5-flash-latest"; // Fallback directo y robusto
          try {
             const resMod = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY);
             const dataMod = await resMod.json();
             if(dataMod.models) {
-                const validModels = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                const optimo = validModels.find(m => m.name.includes("gemini-1.5-flash")) || validModels.find(m => m.name.includes("gemini-pro")) || validModels[0];
+                const modelosValidos = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                const optimo = modelosValidos.find(m => m.name === "models/gemini-1.5-flash") || 
+                               modelosValidos.find(m => m.name === "models/gemini-1.5-flash-latest") || 
+                               modelosValidos.find(m => m.name === "models/gemini-pro") || 
+                               modelosValidos[0];
                 if(optimo) modeloElegido = optimo.name.replace('models/', '');
             }
-         } catch(e) { console.warn("Fallo listModels", e); }
+         } catch(e) { console.warn("Fallo al listar modelos, usando fallback", e); }
 
          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloElegido}:generateContent?key=${API_KEY}`;
          const payload = {
