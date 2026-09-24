@@ -29,8 +29,6 @@ const IconWallet = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="n
 const IconSparkles = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
 const IconShield = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
 const IconWrench = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>;
-
-// Íconos para la contraseña
 const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const IconEyeOff = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
 
@@ -52,7 +50,6 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -205,18 +202,8 @@ function LoginScreen({ onLogin, showToast }) {
             <div className="space-y-1 w-full relative">
               <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Clave de Acceso</label>
               <div className="relative">
-                <input 
-                  type={showPass ? "text" : "password"} 
-                  value={pass} 
-                  onChange={handlePassChange} 
-                  placeholder="" 
-                  className={`w-full glass-panel bg-black/50 border ${errorMsg ? 'border-red-500' : 'border-[#333]'} rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em] pr-12`} 
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2ff00] transition-colors"
-                >
+                <input type={showPass ? "text" : "password"} value={pass} onChange={handlePassChange} placeholder="" className={`w-full glass-panel bg-black/50 border ${errorMsg ? 'border-red-500' : 'border-[#333]'} rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em] pr-12`} />
+                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2ff00] transition-colors">
                   {showPass ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
@@ -378,7 +365,6 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -431,9 +417,19 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   const [cantidadInsumo, setCantidadInsumo] = useState('');
   const [editId, setEditId] = useState(null);
   const [filtroCaja, setFiltroCaja] = useState('Todos');
-  
-  // CORRECCIÓN CRÍTICA: La variable de eliminar ahora existe correctamente en memoria
   const [deleteId, setDeleteId] = useState(null);
+
+  const safeInventario = inventario || [];
+
+  // FUNCIONALIDAD: Autocompletado del nombre al seleccionar insumo
+  useEffect(() => {
+    if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
+        const ins = safeInventario.find(i => i.id === idInsumo);
+        if (ins) {
+            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
+        }
+    }
+  }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
   const limpiarForm = () => { 
       setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); 
@@ -472,7 +468,19 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
     }
   };
 
-  const eliminarMov = (id) => db.collection('finanzas').doc(id).delete().then(() => { showToast('Eliminado', 'success'); setDeleteId(null); });
+  const eliminarMov = (id) => {
+      const f = finanzas.find(x => x.id === id);
+      if (f && f.tipo === 'Gasto' && f.categoriaGasto === 'Insumo' && f.idInsumo && f.cantidadInsumo) {
+          const itemRef = db.collection('inventario').doc(f.idInsumo);
+          itemRef.get().then(doc => {
+              if (doc.exists) {
+                  const actual = Number(doc.data().cantidad) || 0;
+                  itemRef.update({ cantidad: actual - Number(f.cantidadInsumo) });
+              }
+          });
+      }
+      db.collection('finanzas').doc(id).delete().then(() => { showToast('Eliminado (Stock restaurado)', 'success'); setDeleteId(null); });
+  };
   
   const cargarParaEditar = (f) => { 
       setTipo(f.tipo || 'Ingreso'); 
@@ -495,7 +503,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   };
 
   const safeFinanzas = finanzas || [];
-  const safeInventario = inventario || [];
 
   // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
@@ -638,7 +645,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -1031,7 +1038,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   {p.urlArchivo && <a href={p.urlArchivo} target="_blank" rel="noreferrer" className="text-[10px] md:text-xs text-[#e2ff00] underline break-all hover:text-white transition-colors">Abrir Archivo</a>}
                 </div>
                 
-                {/* FUNCION PREMIUM: Si está completado, muestra generador de Garantía */}
                 <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
                   {p.estado === 'Completado' && (
                      <button onClick={() => exportarRemitoGarantia(p)} className="flex-1 md:flex-none md:w-48 bg-[#111] text-white text-[9px] uppercase font-bold py-3.5 rounded-xl border border-[#444] flex items-center justify-center gap-2 hover:bg-[#222] transition-colors"><IconShield /> Exportar Remito/Garantía</button>
@@ -1246,10 +1252,9 @@ function InventarioView({ inventario, showToast }) {
   );
 }
 
-// --- VISTA PRESUPUESTO (RESTAURADO COMPLETO + FUNCIONES PREMIUM) ---
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
-  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbxE0G3BsraiT0du0BHvvF8U38YUXiMSD8Ta-LAMQG3VgRlCluvMwTfJvtei23hmiRmT/exec"; 
+  const URL_BACKEND_GAS = "PEGAR_URL_DE_APPS_SCRIPT_AQUI"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
@@ -1259,16 +1264,6 @@ function PresupuestoView({ showToast, loggedUser }) {
   const [crAncho, setCrAncho] = useState(''); const [crAlto, setCrAlto] = useState(''); const [crDensidad, setCrDensidad] = useState('40'); const [crComplejidad, setCrComplejidad] = useState('3'); const [crExterior, setCrExterior] = useState('No'); const [crLeds, setCrLeds] = useState('No'); const [crInstalacion, setCrInstalacion] = useState('Sin colocación'); const [crEspesorFrente, setCrEspesorFrente] = useState('20mm'); const [crEspesorFondo, setCrEspesorFondo] = useState('Ninguno'); const [crDiseno, setCrDiseno] = useState('No'); 
   const [crMetrosLed, setCrMetrosLed] = useState(''); const [crMetrosCable, setCrMetrosCable] = useState('');
   const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
-
-  useEffect(() => {
-     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
-     if (w > 0 && h > 0) {
-        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
-        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
-     } else {
-        setCrMetrosLed(''); setCrMetrosCable('');
-     }
-  }, [crAncho, crAlto]);
 
   const m2Totales = (parseFloat(crAncho) || 0) * (parseFloat(crAlto) || 0); 
   let multiplicadorMerma = crDensidad === '100' ? 1.3 : (crDensidad === '65' ? 1.1 : 0.8);
@@ -1308,6 +1303,16 @@ function PresupuestoView({ showToast, loggedUser }) {
 
   useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
 
+  useEffect(() => {
+     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
+     if (w > 0 && h > 0) {
+        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
+        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
+     } else {
+        setCrMetrosLed(''); setCrMetrosCable('');
+     }
+  }, [crAncho, crAlto]);
+
   // ESTADOS BETA AI
   const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaDiseno, setBetaDiseno] = useState('No'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
 
@@ -1333,7 +1338,7 @@ function PresupuestoView({ showToast, loggedUser }) {
   const handleRemoveBetaPlaca = (id) => setBetaPlacas(betaPlacas.filter(p => p.id !== id));
   const handleUpdateBetaPlaca = (id, field, value) => setBetaPlacas(betaPlacas.map(p => p.id === id ? { ...p, [field]: value } : p));
 
-  const generarPropuestaIA = () => {
+  const generarPropuestaIA = async () => {
      const placasValidas = betaPlacas.filter(p => (parseFloat(p.cantidad)||0) > 0);
      if(!betaCliente || !betaTrabajo || placasValidas.length === 0 || !betaAncho || !betaAlto) {
          return showToast("Completá cliente, trabajo, medidas y al menos 1 placa", "error");
@@ -1352,17 +1357,78 @@ function PresupuestoView({ showToast, loggedUser }) {
      "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? ` (SÍ LLEVA: Incluye ${betaMetrosLed}m de tira LED, ${betaMetrosCable}m de cable cristal, soportes 3D y fuente)` : " (NO LLEVA LUZ)") + ".\n" +
      "Nivel de Instalación: " + betaInstalacion + ".";
 
-     fetch(URL_BACKEND_GAS, {
-       method: "POST",
-       headers: { "Content-Type": "text/plain;charset=utf-8" },
-       body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
-     })
-     .then(res => res.json())
-     .then(data => {
-       if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada"); }
-       else { showToast("Error IA: " + data.error, "error"); }
-       setGenerandoIA(false);
-     }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
+     const instruccionFormato = `Actúa como el experto comercial de Polyfan Tech. 
+     Basándote en los DATOS DEL TRABAJO provistos, completa ESTRICTAMENTE esta plantilla HTML. 
+     REGLAS INQUEBRANTABLES:
+     1. Devuelve SOLO el código HTML. No uses la etiqueta de markdown (\`\`\`html).
+     2. Mantén todas las clases de estilo, colores y separadores punteados intactos.
+     3. En "QUÉ INCLUYE", elimina los ítems que digan [SI LLEVA...] si el cliente no lo solicitó. Si lo solicitó, DEBES dejar el ítem con el texto exacto.
+     4. NO incluyas el precio, ni las formas de pago, ni los tiempos de entrega.
+
+     PLANTILLA EXACTA A REPRODUCIR:
+     <div style="margin-bottom: 20px;">
+       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">DESCRIPCIÓN DEL PROYECTO</h3>
+       <p style="margin: 0; color: #444; line-height: 1.6; font-size: 14px;">[Redacta 1 o 2 líneas muy profesionales describiendo el trabajo y sus medidas]</p>
+     </div>
+     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
+     <div style="margin-bottom: 20px;">
+       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">QUÉ INCLUYE</h3>
+       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
+         <li>Fabricación del corpóreo en Polyfan mediante corte CNC de precisión.</li>
+         [SI LLEVA VINILO: <li>Aplicación de gráfica en vinilo impreso de alta calidad.</li>]
+         [SI NO LLEVA VINILO: <li>Pintura y acabado premium con colores a elección.</li>]
+         [SI LLEVA EXTERIOR: <li>Tratamiento de impermeabilización (Laca + Masilla) apto para intemperie.</li>]
+         [SI LLEVA LUZ LED: <li>Sistema de retroiluminación LED (trasera), incluye cableado cristal, soportes de separación 3D y fuente de alimentación.</li>]
+         <li>[Detallar tipo de instalación solicitada o si se entrega listo para colocar sin instalación].</li>
+       </ul>
+     </div>
+     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
+     <div style="margin-bottom: 20px;">
+       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">CARACTERÍSTICAS TÉCNICAS</h3>
+       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
+         <li>Material: [Especificar composición de placas según los datos].</li>
+         <li>Dimensiones totales: [Ancho x Alto].</li>
+         <li>Uso recomendado: [Interior o Exterior].</li>
+       </ul>
+     </div>
+     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
+     <div style="margin-bottom: 10px;">
+       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">OBSERVACIONES</h3>
+       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
+         <li>Se requiere confirmación de diseño final y medidas antes de producción.</li>
+         <li>Sujeto a modificaciones según viabilidad técnica de los trazos del logo.</li>
+       </ul>
+     </div>`;
+
+     try {
+         const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
+         const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
+         const payload = {
+             contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
+             generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
+         };
+
+         const res = await fetch(url, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify(payload)
+         });
+         const data = await res.json();
+         
+         if (data.candidates && data.candidates.length > 0) {
+             const textoHTML = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
+             setBetaRespuestaIA(textoHTML);
+             showToast("Propuesta generada");
+         } else if (data.error) {
+             showToast("Error IA: " + data.error.message, "error");
+         } else {
+             showToast("Respuesta no válida de la IA", "error");
+         }
+     } catch (err) {
+         showToast("Error Red/IA: " + err.message, "error");
+     } finally {
+         setGenerandoIA(false);
+     }
   };
 
   const exportarTicketBeta = () => {
@@ -1444,7 +1510,7 @@ function PresupuestoView({ showToast, loggedUser }) {
             <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
           </div>
           <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
-          <p style="font-size: 11px; color: #666; font-weight: bold; margin: top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
+          <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
         </div>
       `;
       const element = document.createElement('div'); element.innerHTML = ticketHTML; 
@@ -1507,7 +1573,21 @@ function PresupuestoView({ showToast, loggedUser }) {
     let textoEspesores = `Polyfan ${crEspesorFrente}`;
     if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
     let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
-    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(texto), "_blank");
+    window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(texto), "_blank");
+  };
+
+  const guardarComoLead = () => {
+    if(!betaCliente || !betaTrabajo) return showToast("Faltan datos del cliente/trabajo", "error");
+    db.collection('prospectos').add({
+      nombre: betaCliente,
+      interes: `Propuesta IA generada: ${betaTrabajo} (${betaAncho}x${betaAlto}m). Precio estimado: $${betaPrecioAjustado}`,
+      estado: 'Caliente',
+      celular: '',
+      fecha: new Date().toISOString(),
+      registradoPor: loggedUser || 'Sistema IA'
+    }).then(() => {
+      showToast('¡Lead guardado en el sistema!', 'success');
+    }).catch(() => showToast('Error al guardar', 'error'));
   };
 
   return (
