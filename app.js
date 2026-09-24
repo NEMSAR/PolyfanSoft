@@ -31,6 +31,7 @@ const IconShield = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="n
 const IconWrench = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>;
 const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const IconEyeOff = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
+const IconCopy = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 
 function NavButton({ icon, label, active, onClick }) { 
   return ( 
@@ -366,6 +367,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* RADAR DE ENTREGAS URGENTES */}
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
            <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
              <IconClock /> Radar de Entregas
@@ -422,10 +424,13 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeInventario = inventario || [];
 
+  // FUNCIONALIDAD: Autocompletado del nombre al seleccionar insumo
   useEffect(() => {
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
         const ins = safeInventario.find(i => i.id === idInsumo);
-        if (ins) setConcepto(`Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
+        if (ins) {
+            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
+        }
     }
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
@@ -506,6 +511,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
+  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
@@ -555,6 +561,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       }
   });
 
+  // SIMULADOR EN TIEMPO REAL
   let simMonto = Number(monto) || 0;
   let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
 
@@ -575,6 +582,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
+  // APLICAR FILTRO AL HISTORIAL
   const listInversa = [...listOrdenada].reverse().filter(f => {
      if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
      if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
@@ -1401,21 +1409,25 @@ function PresupuestoView({ showToast, loggedUser }) {
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
          
-         let modeloElegido = "gemini-1.5-flash-latest"; // Fallback directo y robusto
+         let modeloElegido = "gemini-pro"; 
          try {
             const resMod = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY);
-            const dataMod = await resMod.json();
-            if(dataMod.models) {
-                const modelosValidos = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                const optimo = modelosValidos.find(m => m.name === "models/gemini-1.5-flash") || 
-                               modelosValidos.find(m => m.name === "models/gemini-1.5-flash-latest") || 
-                               modelosValidos.find(m => m.name === "models/gemini-pro") || 
-                               modelosValidos[0];
-                if(optimo) modeloElegido = optimo.name.replace('models/', '');
+            if (resMod.ok) {
+                const dataMod = await resMod.json();
+                if(dataMod.models) {
+                    const modelosValidos = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                    const optimo = modelosValidos.find(m => m.name === "models/gemini-1.5-flash") || 
+                                   modelosValidos.find(m => m.name === "models/gemini-1.5-flash-latest") || 
+                                   modelosValidos.find(m => m.name === "models/gemini-1.5-pro") || 
+                                   modelosValidos.find(m => m.name === "models/gemini-pro") ||
+                                   modelosValidos[0];
+                    if(optimo) modeloElegido = optimo.name.replace('models/', '');
+                }
             }
          } catch(e) { console.warn("Fallo al listar modelos, usando fallback", e); }
 
          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloElegido}:generateContent?key=${API_KEY}`;
+         
          const payload = {
              contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
              generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
@@ -1431,14 +1443,14 @@ function PresupuestoView({ showToast, loggedUser }) {
          if (data.candidates && data.candidates.length > 0) {
              const textoHTML = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
              setBetaRespuestaIA(textoHTML);
-             showToast("Propuesta generada");
+             showToast("Propuesta generada con éxito");
          } else if (data.error) {
              showToast("Error IA: " + data.error.message, "error");
          } else {
              showToast("Respuesta no válida de la IA", "error");
          }
      } catch (err) {
-         showToast("Error Red/IA: " + err.message, "error");
+         showToast("Error de conexión: " + err.message, "error");
      } finally {
          setGenerandoIA(false);
      }
@@ -1483,6 +1495,15 @@ function PresupuestoView({ showToast, loggedUser }) {
         setDescargandoBeta(false); window.scrollTo(0, posPrevia); document.body.removeChild(element); showToast('¡Imagen descargada!');
       });
     }, 800);
+  };
+
+  const copiarPropuestaTextoBeta = () => {
+    if(!betaRespuestaIA) return showToast("Generá la propuesta primero", "error");
+    const textoLimpio = betaRespuestaIA.replace(/<[^>]*>?/gm, ''); // Quita etiquetas HTML
+    const textoCopiar = `*PROPUESTA DE PROYECTO - POLYFANTECH*\n\n${textoLimpio}\n\n*Tiempo de entrega:* ${betaTiempo}\n*Formas de pago:* ${betaPagos}\n*PRECIO FINAL:* $${Number(betaPrecioAjustado).toLocaleString('es-AR')}`;
+    navigator.clipboard.writeText(textoCopiar).then(() => {
+        showToast("Texto copiado al portapapeles");
+    });
   };
 
   const exportarTicketRapido = () => {
@@ -1587,6 +1608,16 @@ function PresupuestoView({ showToast, loggedUser }) {
     if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
     let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
     window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(texto), "_blank");
+  };
+
+  const copiarPropuestaTextoRapido = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error");
+    let textoEspesores = `Polyfan ${crEspesorFrente}`;
+    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
+    const textoCopiar = `*PRESUPUESTO - POLYFANTECH*\n\n*Medidas:* ${crAncho}m x ${crAlto}m\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*PRECIO FINAL:* $${Number(precioAjustado).toLocaleString('es-AR')}`;
+    navigator.clipboard.writeText(textoCopiar).then(() => {
+        showToast("Texto copiado al portapapeles");
+    });
   };
 
   const guardarComoLead = () => {
@@ -1749,7 +1780,10 @@ function PresupuestoView({ showToast, loggedUser }) {
                   <button onClick={enviarWhatsAppEstimacion} className="bg-[#1a2e1a] text-green-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 border border-green-900/50 hover:bg-[#203a20] transition-all">
                     <IconWhatsApp /> WhatsApp
                   </button>
-                  <button onClick={exportarOrdenTrabajoInterna} className="bg-[#1a1a2e] text-blue-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 border border-blue-900/50 hover:bg-[#20203a] transition-all">
+                  <button onClick={copiarPropuestaTextoRapido} className="bg-[#1a1a1a] text-gray-300 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 border border-[#444] hover:bg-[#222] transition-all">
+                    <IconCopy /> Copiar Texto
+                  </button>
+                  <button onClick={exportarOrdenTrabajoInterna} className="col-span-2 bg-[#1a1a2e] text-blue-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 border border-blue-900/50 hover:bg-[#20203a] transition-all">
                     <IconWrench /> Ficha Taller
                   </button>
                 </div>
@@ -1886,6 +1920,9 @@ function PresupuestoView({ showToast, loggedUser }) {
                  <div className="flex flex-col gap-3">
                    <button onClick={exportarTicketBeta} className="w-full bg-[#111] border border-purple-500/50 text-purple-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-purple-900/20 transition-all">
                       <IconImage /> Descargar Propuesta en PNG
+                   </button>
+                   <button onClick={copiarPropuestaTextoBeta} className="w-full bg-[#1a1a1a] border border-[#444] text-gray-300 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#222] transition-all">
+                      <IconCopy /> Copiar Texto
                    </button>
                    <button onClick={guardarComoLead} className="w-full bg-[#1a2e1a] border border-green-500/50 text-green-400 text-[10px] tracking-widest font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#203a20] transition-all">
                       <IconUsers /> Guardar como Lead Activo
