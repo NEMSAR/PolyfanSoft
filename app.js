@@ -1,4 +1,5 @@
 const { useState, useEffect, useMemo, useRef } = React;
+// REGLA CRÍTICA: Traemos la base de datos
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
@@ -424,7 +425,9 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   useEffect(() => {
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
         const ins = safeInventario.find(i => i.id === idInsumo);
-        if (ins) setConcepto(`Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
+        if (ins) {
+            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
+        }
     }
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
@@ -643,7 +646,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -665,6 +668,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
+        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -1398,31 +1402,42 @@ function PresupuestoView({ showToast, loggedUser }) {
 
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
-         
-         const modeloElegido = "gemini-1.5-flash"; 
-
-         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloElegido}:generateContent?key=${API_KEY}`;
-         
          const payload = {
              contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
              generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
          };
 
-         const res = await fetch(url, {
-             method: "POST",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify(payload)
-         });
-         const data = await res.json();
-         
-         if (data.candidates && data.candidates.length > 0) {
-             const textoHTML = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
-             setBetaRespuestaIA(textoHTML);
+         // ALGORITMO EN CASCADA: Blinda contra cambios de modelo en Google
+         const modelosFallbacks = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"];
+         let respuestaExitosa = null;
+         let ultimoError = null;
+
+         for (const modelo of modelosFallbacks) {
+             try {
+                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${API_KEY}`;
+                 const res = await fetch(url, {
+                     method: "POST",
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify(payload)
+                 });
+                 const data = await res.json();
+                 
+                 if (data.candidates && data.candidates.length > 0) {
+                     respuestaExitosa = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
+                     break; 
+                 } else if (data.error) {
+                     ultimoError = data.error.message;
+                 }
+             } catch (err) {
+                 ultimoError = err.message;
+             }
+         }
+
+         if (respuestaExitosa) {
+             setBetaRespuestaIA(respuestaExitosa);
              showToast("Propuesta generada con éxito");
-         } else if (data.error) {
-             showToast("Error IA: " + data.error.message, "error");
          } else {
-             showToast("Respuesta no válida de la IA", "error");
+             showToast("Error IA: " + (ultimoError || "Modelos no disponibles"), "error");
          }
      } catch (err) {
          showToast("Error de conexión: " + err.message, "error");
@@ -1533,16 +1548,6 @@ function PresupuestoView({ showToast, loggedUser }) {
     }, 300);
   };
 
-  const copiarPropuestaTextoRapido = () => {
-    if(!m2Totales) return showToast("Faltan medidas", "error");
-    let textoEspesores = `Polyfan ${crEspesorFrente}`;
-    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
-    const textoCopiar = `*PRESUPUESTO - POLYFANTECH*\n\n*Medidas:* ${crAncho}m x ${crAlto}m\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*PRECIO FINAL:* $${Number(precioAjustado).toLocaleString('es-AR')}`;
-    navigator.clipboard.writeText(textoCopiar).then(() => {
-        showToast("Texto copiado al portapapeles");
-    });
-  };
-
   const exportarOrdenTrabajoInterna = () => {
     if(!m2Totales) return showToast("Faltan medidas", "error"); 
     setDescargandoExpress(true);
@@ -1593,6 +1598,16 @@ function PresupuestoView({ showToast, loggedUser }) {
     if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
     let texto = `Hola! 👋 Somos PolyfanTech.\n\nTe paso un *precio estimado* para tu corpóreo de ${crAncho}m x ${crAlto}m:\n\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*Precio Final:* $${Number(precioAjustado).toLocaleString('es-AR')}\n\nQuedamos a disposición!`;
     window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(texto), "_blank");
+  };
+
+  const copiarPropuestaTextoRapido = () => {
+    if(!m2Totales) return showToast("Faltan medidas", "error");
+    let textoEspesores = `Polyfan ${crEspesorFrente}`;
+    if(crEspesorFondo !== 'Ninguno') textoEspesores += ` (frente) + Base de ${crEspesorFondo}`;
+    const textoCopiar = `*PRESUPUESTO - POLYFANTECH*\n\n*Medidas:* ${crAncho}m x ${crAlto}m\n*Material:* ${textoEspesores}\n*Condiciones:* ${crExterior === 'Si'? 'Exterior' : 'Interior'} | ${crLeds === 'Si' ? 'Con LED' : 'Sin LED'} | ${crInstalacion}\n*Diseño:* ${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}\n\n*PRECIO FINAL:* $${Number(precioAjustado).toLocaleString('es-AR')}`;
+    navigator.clipboard.writeText(textoCopiar).then(() => {
+        showToast("Texto copiado al portapapeles");
+    });
   };
 
   const guardarComoLead = () => {
