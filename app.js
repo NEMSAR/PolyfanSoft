@@ -50,6 +50,7 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
+// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -421,13 +422,10 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeInventario = inventario || [];
 
-  // FUNCIONALIDAD: Autocompletado del nombre al seleccionar insumo
   useEffect(() => {
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
         const ins = safeInventario.find(i => i.id === idInsumo);
-        if (ins) {
-            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
-        }
+        if (ins) setConcepto(`Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
     }
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
@@ -456,7 +454,11 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
         itemRef.get().then(doc => {
             if(doc.exists) {
                 const actual = Number(doc.data().cantidad) || 0;
-                itemRef.update({ cantidad: actual + Number(cantidadInsumo) });
+                const nuevoCostoU = Math.round((Number(monto) || 0) / (Number(cantidadInsumo) || 1));
+                itemRef.update({ 
+                    cantidad: actual + Number(cantidadInsumo),
+                    costoUnitario: nuevoCostoU
+                });
             }
         });
     }
@@ -475,7 +477,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           itemRef.get().then(doc => {
               if (doc.exists) {
                   const actual = Number(doc.data().cantidad) || 0;
-                  itemRef.update({ cantidad: actual - Number(f.cantidadInsumo) });
+                  itemRef.update({ cantidad: Math.max(0, actual - Number(f.cantidadInsumo)) });
               }
           });
       }
@@ -504,8 +506,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
-  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
-  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); // 17 Sep 2026
+  const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime();
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
@@ -554,7 +555,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       }
   });
 
-  // SIMULADOR EN TIEMPO REAL
   let simMonto = Number(monto) || 0;
   let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
 
@@ -575,7 +575,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
-  // APLICAR FILTRO AL HISTORIAL
   const listInversa = [...listOrdenada].reverse().filter(f => {
      if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
      if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
@@ -667,7 +666,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
-        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -724,7 +722,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
                       <button onClick={() => setDeleteId(null)} className="bg-[#222] text-gray-400 font-bold text-[9px] px-2 py-1.5 rounded hover:bg-[#333] transition-colors">X</button>
                     </div>
                   ) : (
-                    <div>
+                    <div className="flex flex-col gap-1">
                       <button onClick={() => cargarParaEditar(f)} className="text-gray-400 hover:text-[#e2ff00] transition-colors p-1"><IconEdit /></button>
                       <button onClick={() => setDeleteId(f.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><IconTrash /></button>
                     </div>
@@ -792,7 +790,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                  if (doc.exists) {
                      const currentCant = Number(doc.data().cantidad) || 0;
                      const nuevaCant = currentCant - Number(ins.cantidad);
-                     itemRef.update({ cantidad: nuevaCant });
+                     itemRef.update({ cantidad: Math.max(0, nuevaCant) });
                  }
              });
           }
@@ -901,8 +899,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
-  const safeInventario = inventario || []; 
-
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
     .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
@@ -957,7 +953,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   <div key={i} className="flex gap-2 items-center mb-2">
                       <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                           <option value="">Seleccionar Material...</option>
-                          {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                       </select>
                       <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                       <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
@@ -1265,6 +1261,16 @@ function PresupuestoView({ showToast, loggedUser }) {
   const [crMetrosLed, setCrMetrosLed] = useState(''); const [crMetrosCable, setCrMetrosCable] = useState('');
   const [precioAjustado, setPrecioAjustado] = useState(0); const [descargandoExpress, setDescargandoExpress] = useState(false);
 
+  useEffect(() => {
+     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
+     if (w > 0 && h > 0) {
+        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
+        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
+     } else {
+        setCrMetrosLed(''); setCrMetrosCable('');
+     }
+  }, [crAncho, crAlto]);
+
   const m2Totales = (parseFloat(crAncho) || 0) * (parseFloat(crAlto) || 0); 
   let multiplicadorMerma = crDensidad === '100' ? 1.3 : (crDensidad === '65' ? 1.1 : 0.8);
 
@@ -1302,16 +1308,6 @@ function PresupuestoView({ showToast, loggedUser }) {
   const precioSugeridoRapido = (subtotalRapido * 2) + costoDisenoRapido;
 
   useEffect(() => { setPrecioAjustado(precioSugeridoRapido); }, [precioSugeridoRapido]);
-
-  useEffect(() => {
-     const w = parseFloat(crAncho) || 0; const h = parseFloat(crAlto) || 0;
-     if (w > 0 && h > 0) {
-        setCrMetrosLed(Math.ceil((w + h) * 4.5).toString());
-        setCrMetrosCable(Math.ceil((w + h) * 1.2).toString());
-     } else {
-        setCrMetrosLed(''); setCrMetrosCable('');
-     }
-  }, [crAncho, crAlto]);
 
   // ESTADOS BETA AI
   const [betaCliente, setBetaCliente] = useState(''); const [betaTrabajo, setBetaTrabajo] = useState(''); const [betaAncho, setBetaAncho] = useState(''); const [betaAlto, setBetaAlto] = useState(''); const [betaPlacas, setBetaPlacas] = useState([{ id: Date.now(), espesor: '30mm', cantidad: '' }]); const [betaVinilo, setBetaVinilo] = useState('No'); const [betaExterior, setBetaExterior] = useState('No'); const [betaLuz, setBetaLuz] = useState('No'); const [betaMetrosLed, setBetaMetrosLed] = useState(''); const [betaMetrosCable, setBetaMetrosCable] = useState(''); const [betaInstalacion, setBetaInstalacion] = useState('Normal'); const [betaTiempo, setBetaTiempo] = useState('10 a 15 días hábiles'); const [betaPagos, setBetaPagos] = useState('50% anticipo, 50% al finalizar'); const [betaDiseno, setBetaDiseno] = useState('No'); const [betaPrecioAjustado, setBetaPrecioAjustado] = useState(0); const [betaRespuestaIA, setBetaRespuestaIA] = useState(''); const [generandoIA, setGenerandoIA] = useState(false); const [descargandoBeta, setDescargandoBeta] = useState(false);
@@ -1402,7 +1398,19 @@ function PresupuestoView({ showToast, loggedUser }) {
 
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
-         const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
+         
+         let modeloElegido = "gemini-1.5-flash";
+         try {
+            const resMod = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY);
+            const dataMod = await resMod.json();
+            if(dataMod.models) {
+                const validModels = dataMod.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                const optimo = validModels.find(m => m.name.includes("gemini-1.5-flash")) || validModels.find(m => m.name.includes("gemini-pro")) || validModels[0];
+                if(optimo) modeloElegido = optimo.name.replace('models/', '');
+            }
+         } catch(e) { console.warn("Fallo listModels", e); }
+
+         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloElegido}:generateContent?key=${API_KEY}`;
          const payload = {
              contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
              generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
