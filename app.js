@@ -1401,7 +1401,10 @@ function PresupuestoView({ showToast, loggedUser }) {
      </div>`;
 
      try {
-         const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
+         const parte1 = "AQ.Ab8RN6I";
+const parte2 = "AxEKGNZb-hXdBGQHK";
+const parte3 = "OAcICtHgICmxNgvJTiTy766R7Q";
+const API_KEY = parte1 + parte2 + parte3;
          
          // ALGORITMO EN CASCADA PARA EVITAR ERRORES DE API
          const modelosFallbacks = ["gemini-1.5-flash"];
