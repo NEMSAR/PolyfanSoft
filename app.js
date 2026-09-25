@@ -3,9 +3,9 @@ const { useState, useEffect, useMemo, useRef } = React;
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
-const APP_LOGO_URL = "[https://i.imgur.com/YjSvTHr.png](https://i.imgur.com/YjSvTHr.png)"; 
-const TICKET_LOGO_URL = "[https://i.imgur.com/ytru7Zu.png](https://i.imgur.com/ytru7Zu.png)"; 
-const NOVABIT_LOGO_URL = "[https://i.imgur.com/Bh3Dm7l.png](https://i.imgur.com/Bh3Dm7l.png)";
+const APP_LOGO_URL = "https://i.imgur.com/YjSvTHr.png"; 
+const TICKET_LOGO_URL = "https://i.imgur.com/ytru7Zu.png"; 
+const NOVABIT_LOGO_URL = "https://i.imgur.com/Bh3Dm7l.png";
 const PASS_ACCESO = "polyfan2026";
 
 // --- ÍCONOS COMPARTIDOS ---
