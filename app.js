@@ -1,5 +1,4 @@
 const { useState, useEffect, useMemo, useRef } = React;
-// REGLA CRÍTICA: Traemos la base de datos
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
@@ -62,9 +61,7 @@ function ChartCanvas({ type, data, options, height = 250 }) {
         const ctx = canvasRef.current.getContext('2d');
         chartRef.current = new window.Chart(ctx, { type, data, options });
       }
-    } catch (error) {
-      console.error("Error al renderizar el gráfico:", error);
-    }
+    } catch (error) { console.error("Error al renderizar:", error); }
     return () => { if (chartRef.current) chartRef.current.destroy(); };
   }, [type, data, options]);
 
@@ -73,7 +70,6 @@ function ChartCanvas({ type, data, options, height = 250 }) {
 
 const formatUnidad = (u) => { if(u==='Metros') return 'm'; if(u==='Litros') return 'L'; if(u==='Gramos') return 'g'; return 'u'; };
 
-// --- COMPONENTE PRINCIPAL APP ---
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loggedUser, setLoggedUser] = useState(null);
@@ -101,17 +97,16 @@ function App() {
     return () => unsubs.forEach(unsub => unsub());
   }, [loggedUser]);
 
-  if (!loggedUser) {
-    return <LoginScreen onLogin={setLoggedUser} showToast={showToast} />;
-  }
+  if (!loggedUser) return <LoginScreen onLogin={setLoggedUser} showToast={showToast} />;
 
   return (
     <div className="pb-32 md:pb-10 flex min-h-screen">
       <style>
         {`
           .preview-propuesta-ia h3 { color: #fff !important; }
-          .preview-propuesta-ia p { color: #d1d5db !important; }
-          .preview-propuesta-ia li { color: #d1d5db !important; }
+          .preview-propuesta-ia p, .preview-propuesta-ia li { color: #d1d5db !important; }
+          #ticket-rapido h3 { color: #000 !important; }
+          #ticket-rapido p, #ticket-rapido li { color: #444 !important; }
         `}
       </style>
       {toastMsg && (
@@ -154,17 +149,11 @@ function App() {
           {activeTab === 'finanzas' && <FinanzasView finanzas={finanzas} inventario={inventario} loggedUser={loggedUser} showToast={showToast} />}
           {activeTab === 'presupuesto' && <PresupuestoView showToast={showToast} loggedUser={loggedUser} />}
         </div>
-
-        <div className="mt-20 flex flex-col items-center justify-center opacity-30 hover:opacity-100 transition-all duration-500 cursor-default pb-10">
-          <p className="text-[8px] uppercase tracking-[0.4em] text-gray-500 mb-3 font-bold">Software de Gestión by</p>
-          <img src={NOVABIT_LOGO_URL} alt="NovaBit Media Agency" className="h-8 object-contain grayscale hover:grayscale-0 transition-all duration-500 hover:scale-110" />
-        </div>
       </main>
     </div>
   );
 }
 
-// --- VISTAS DEL SISTEMA ---
 function LoginScreen({ onLogin, showToast }) {
   const [selectedUser, setSelectedUser] = useState(''); 
   const [pass, setPass] = useState('');
@@ -173,18 +162,10 @@ function LoginScreen({ onLogin, showToast }) {
   
   const handleIngresar = () => { 
     if (pass === PASS_ACCESO) { 
-      setErrorMsg('');
-      onLogin(selectedUser); 
-      showToast(`¡Sesión iniciada, ${selectedUser}!`); 
+      setErrorMsg(''); onLogin(selectedUser); showToast(`¡Sesión iniciada, ${selectedUser}!`); 
     } else { 
-      setErrorMsg('CONTRASEÑA INCORRECTA. INTENTA NUEVAMENTE.');
-      showToast('Credenciales denegadas', 'error'); 
+      setErrorMsg('CONTRASEÑA INCORRECTA. INTENTA NUEVAMENTE.'); showToast('Credenciales denegadas', 'error'); 
     } 
-  };
-
-  const handlePassChange = (e) => {
-    setPass(e.target.value);
-    if (errorMsg) setErrorMsg('');
   };
 
   return (
@@ -206,18 +187,14 @@ function LoginScreen({ onLogin, showToast }) {
               <p className="text-gray-400 uppercase text-xs font-bold tracking-widest">Hola, <span className="text-white text-sm">{selectedUser}</span></p>
               <button onClick={() => {setSelectedUser(''); setPass(''); setErrorMsg(''); setShowPass(false);}} className="text-[9px] bg-[#222] px-3 py-1.5 rounded-full text-gray-400 uppercase font-bold hover:text-white transition-colors">Cambiar</button>
             </div>
-            
             <div className="space-y-1 w-full relative">
               <label className="text-[10px] text-gray-400 uppercase font-bold tracking-widest ml-1">Clave de Acceso</label>
               <div className="relative">
-                <input type={showPass ? "text" : "password"} value={pass} onChange={handlePassChange} placeholder="" className={`w-full glass-panel bg-black/50 border ${errorMsg ? 'border-red-500' : 'border-[#333]'} rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em] pr-12`} />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2ff00] transition-colors">
-                  {showPass ? <IconEyeOff /> : <IconEye />}
-                </button>
+                <input type={showPass ? "text" : "password"} value={pass} onChange={e => {setPass(e.target.value); setErrorMsg('');}} className={`w-full glass-panel bg-black/50 border ${errorMsg ? 'border-red-500' : 'border-[#333]'} rounded-xl p-4 text-white focus:border-[#e2ff00] outline-none transition-all text-center tracking-[0.5em] pr-12`} />
+                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2ff00] transition-colors">{showPass ? <IconEyeOff /> : <IconEye />}</button>
               </div>
               {errorMsg && <p className="text-red-500 text-[9px] uppercase font-bold tracking-widest text-center mt-2 animate-pop">{errorMsg}</p>}
             </div>
-
             <button onClick={handleIngresar} className="w-full bg-[#e2ff00] text-black font-black uppercase py-4 rounded-xl mt-4 shadow-[0_0_25px_rgba(226,255,0,0.3)] hover:scale-105 transition-all">Desbloquear Sistema</button>
           </div>
         )}
@@ -246,43 +223,21 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
   const progresoPedidos = totalPedidos > 0 ? Math.round((pedidosCompletados / totalPedidos) * 100) : 0;
   
   const entregasProximas = useMemo(() => {
-    return safePedidos
-      .filter(p => p.estado !== 'Completado' && p.fechaLimite)
-      .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime())
-      .slice(0, 4); 
+    return safePedidos.filter(p => p.estado !== 'Completado' && p.fechaLimite).sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime()).slice(0, 4); 
   }, [safePedidos]);
   
   const leadsActivos = safeProspectos.filter(p => p.estado !== 'Frío').length;
-  const dineroPorCobrar = safePedidos.filter(p => p.estado !== 'Completado').reduce((a, b) => {
-    const resto = (Number(b.precioTotal) || 0) - (Number(b.sena) || 0);
-    return a + (resto > 0 ? resto : 0);
-  }, 0);
+  const dineroPorCobrar = safePedidos.filter(p => p.estado !== 'Completado').reduce((a, b) => { const resto = (Number(b.precioTotal) || 0) - (Number(b.sena) || 0); return a + (resto > 0 ? resto : 0); }, 0);
   const stockCritico = safeInventario.filter(i => (Number(i.cantidad) || 0) <= (Number(i.minimoCritico) || 0));
 
   const generarListaComprasWhatsApp = () => {
     if (stockCritico.length === 0) return;
     const faltantes = stockCritico.map(i => `- ${i.nombre}: Quedan ${i.cantidad}${formatUnidad(i.unidad)}`).join('\n');
-    const msj = `*LISTA DE COMPRAS - POLYFANTECH* 🛒\n\nHola! Necesitamos reponer urgentemente los siguientes insumos que llegaron a su límite:\n\n${faltantes}\n\nPor favor pasame presupuesto. ¡Gracias!`;
-    window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(msj), "_blank");
+    window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(`*LISTA DE COMPRAS - POLYFANTECH* 🛒\n\nHola! Necesitamos reponer urgentemente los siguientes insumos:\n\n${faltantes}\n\nPor favor pasame presupuesto. ¡Gracias!`), "_blank");
   };
 
-  const barChartData = {
-    labels: ['Caja Histórica'],
-    datasets: [
-      { label: 'Ingresos Brutos', data: [ingresosHistoricos], backgroundColor: '#e2ff00', borderRadius: 4 },
-      { label: 'Gastos Totales', data: [gastosTotales], backgroundColor: '#ef4444', borderRadius: 4 }
-    ]
-  };
-
-  const pieChartData = {
-    labels: ['Pendientes', 'En Proceso', 'Completados'],
-    datasets: [{
-      data: [pedidosPendientes, pedidosProceso, pedidosCompletados],
-      backgroundColor: ['#eab308', '#3b82f6', '#22c55e'],
-      borderWidth: 0, hoverOffset: 4
-    }]
-  };
-
+  const barChartData = { labels: ['Caja Histórica'], datasets: [{ label: 'Ingresos Brutos', data: [ingresosHistoricos], backgroundColor: '#e2ff00', borderRadius: 4 }, { label: 'Gastos Totales', data: [gastosTotales], backgroundColor: '#ef4444', borderRadius: 4 }] };
+  const pieChartData = { labels: ['Pendientes', 'En Proceso', 'Completados'], datasets: [{ data: [pedidosPendientes, pedidosProceso, pedidosCompletados], backgroundColor: ['#eab308', '#3b82f6', '#22c55e'], borderWidth: 0, hoverOffset: 4 }] };
   const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#aaa', font: { size: 10 } } } }, scales: { y: { grid: { color: '#333' }, ticks: { color: '#888', font: { size: 10 } } }, x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } } } };
   const pieOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#aaa', font: { size: 10 } } } } };
 
@@ -298,15 +253,12 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
                 <p className="text-gray-300 text-[10px] md:text-xs mt-1">Has alcanzado el umbral de alerta en {stockCritico.length} insumo(s).</p>
               </div>
             </div>
-            <button onClick={generarListaComprasWhatsApp} className="w-full md:w-auto bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-5 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 transition-colors shadow-lg">
-              <IconWhatsApp /> Pedir a Proveedor
-            </button>
+            <button onClick={generarListaComprasWhatsApp} className="w-full md:w-auto bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-5 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 transition-colors shadow-lg"><IconWhatsApp /> Pedir a Proveedor</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-2">
             {stockCritico.map(item => (
               <div key={item.id} className="flex justify-between items-center text-xs border border-red-500/30 bg-[#0a0a0a]/50 p-3 rounded-xl">
-                <span className="text-white font-bold truncate pr-2">{item.nombre}</span>
-                <span className="text-red-400 font-black bg-red-500/10 px-2.5 py-1 rounded-md whitespace-nowrap">Stock: {item.cantidad}</span>
+                <span className="text-white font-bold truncate pr-2">{item.nombre}</span><span className="text-red-400 font-black bg-red-500/10 px-2.5 py-1 rounded-md whitespace-nowrap">Stock: {item.cantidad}</span>
               </div>
             ))}
           </div>
@@ -318,55 +270,27 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#e2ff00] to-transparent"></div>
           <div className="flex justify-between items-start mb-4">
             <p className="text-gray-400 uppercase text-[10px] font-bold tracking-[0.2em] text-center md:text-left">Patrimonio Global (Balance Neto)</p>
-            <div className="hidden md:flex items-center gap-1.5 bg-[#e2ff00]/10 border border-[#e2ff00]/20 px-3 py-1.5 rounded-full">
-              <IconTrendingUp />
-              <span className="text-[#e2ff00] text-[9px] uppercase tracking-widest font-bold">Estado Financiero</span>
-            </div>
+            <div className="hidden md:flex items-center gap-1.5 bg-[#e2ff00]/10 border border-[#e2ff00]/20 px-3 py-1.5 rounded-full"><IconTrendingUp /><span className="text-[#e2ff00] text-[9px] uppercase tracking-widest font-bold">Estado Financiero</span></div>
           </div>
-          <h2 className={`text-5xl md:text-6xl font-black tracking-tighter text-center md:text-left ${balanceNeto >= 0 ? 'text-white' : 'text-red-500'}`}>
-            ${balanceNeto.toLocaleString('es-AR')}
-          </h2>
+          <h2 className={`text-5xl md:text-6xl font-black tracking-tighter text-center md:text-left ${balanceNeto >= 0 ? 'text-white' : 'text-red-500'}`}>${balanceNeto.toLocaleString('es-AR')}</h2>
           <div className="flex flex-col md:flex-row justify-between items-center mt-8 pt-6 border-t border-[#333]/50 gap-4">
-            <div className="text-center md:text-left w-full md:w-auto">
-              <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Total Ingresos</p>
-              <p className="text-lg md:text-xl font-bold text-green-400">${ingresosHistoricos.toLocaleString('es-AR')}</p>
-            </div>
-            <div className="text-center bg-[#111] px-5 py-2.5 rounded-xl border border-[#222] w-full md:w-auto">
-              <p className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Caja Física (Liquidez)</p>
-              <p className={`text-lg md:text-xl font-bold ${cajaFisicaGlobal > 0 ? 'text-[#e2ff00]' : 'text-gray-500'}`}>${cajaFisicaGlobal.toLocaleString('es-AR')}</p>
-            </div>
-            <div className="text-center md:text-right w-full md:w-auto">
-              <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Gastos Totales</p>
-              <p className="text-lg md:text-xl font-bold text-red-400">${gastosTotales.toLocaleString('es-AR')}</p>
-            </div>
+            <div className="text-center md:text-left w-full md:w-auto"><p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Total Ingresos</p><p className="text-lg md:text-xl font-bold text-green-400">${ingresosHistoricos.toLocaleString('es-AR')}</p></div>
+            <div className="text-center bg-[#111] px-5 py-2.5 rounded-xl border border-[#222] w-full md:w-auto"><p className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Caja Física (Liquidez)</p><p className={`text-lg md:text-xl font-bold ${cajaFisicaGlobal > 0 ? 'text-[#e2ff00]' : 'text-gray-500'}`}>${cajaFisicaGlobal.toLocaleString('es-AR')}</p></div>
+            <div className="text-center md:text-right w-full md:w-auto"><p className="text-[9px] uppercase tracking-widest text-gray-500 mb-1">Gastos Totales</p><p className="text-lg md:text-xl font-bold text-red-400">${gastosTotales.toLocaleString('es-AR')}</p></div>
           </div>
         </div>
-
         <div className="w-full lg:w-[35%] flex flex-col gap-6">
           <div className="glass-panel border border-[#333] rounded-[2rem] p-6 text-center shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
-            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mb-1 flex justify-center items-center gap-1">
-              <IconDollar /> Dinero en la calle (Por Cobrar)
-            </p>
+            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mb-1 flex justify-center items-center gap-1"><IconDollar /> Dinero en la calle (Por Cobrar)</p>
             <p className="text-2xl font-black text-[#e2ff00] drop-shadow-md">${dineroPorCobrar.toLocaleString('es-AR')}</p>
             <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-2">Corresponde a saldos de trabajos en proceso</p>
           </div>
           <div className="glass-panel border border-[#333] rounded-[2rem] p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-white font-black text-sm uppercase tracking-widest">Producción</h3>
-              <span className="text-xl font-black text-[#e2ff00]">{progresoPedidos}%</span>
-            </div>
-            <div className="w-full bg-[#111] rounded-full h-2 mb-6 overflow-hidden border border-[#222]">
-              <div className="bg-[#e2ff00] h-2 rounded-full shadow-[0_0_10px_#e2ff00]" style={{ width: `${progresoPedidos}%`, transition: 'width 1s ease-in-out' }}></div>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-white font-black text-sm uppercase tracking-widest">Producción</h3><span className="text-xl font-black text-[#e2ff00]">{progresoPedidos}%</span></div>
+            <div className="w-full bg-[#111] rounded-full h-2 mb-6 overflow-hidden border border-[#222]"><div className="bg-[#e2ff00] h-2 rounded-full shadow-[0_0_10px_#e2ff00]" style={{ width: `${progresoPedidos}%`, transition: 'width 1s ease-in-out' }}></div></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center">
-                <p className="text-2xl font-black text-white">{pedidosPendientes + pedidosProceso}</p>
-                <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Trabajos Activos</p>
-              </div>
-              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center">
-                <p className="text-2xl font-black text-[#e2ff00]">{leadsActivos}</p>
-                <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Leads Calientes</p>
-              </div>
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center"><p className="text-2xl font-black text-white">{pedidosPendientes + pedidosProceso}</p><p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Trabajos Activos</p></div>
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 text-center"><p className="text-2xl font-black text-[#e2ff00]">{leadsActivos}</p><p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Leads Calientes</p></div>
             </div>
           </div>
         </div>
@@ -374,42 +298,25 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
 
       <div className="flex flex-col lg:flex-row gap-6 w-full">
         <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg flex flex-col">
-           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
-             <IconClock /> Radar de Entregas
-           </h3>
+           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2"><IconClock /> Radar de Entregas</h3>
            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
              {entregasProximas.length > 0 ? entregasProximas.map(p => {
                const diasFaltantes = Math.ceil((new Date(p.fechaLimite).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                const isUrgent = diasFaltantes <= 3;
                return (
                  <div key={p.id} className={`p-3 rounded-xl border ${isUrgent ? 'bg-red-900/10 border-red-500/30' : 'bg-[#0a0a0a] border-[#222]'}`}>
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-white font-bold text-xs truncate max-w-[70%]">{p.cliente}</span>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${isUrgent ? 'bg-red-500 text-white' : 'bg-[#222] text-gray-400'}`}>
-                        {diasFaltantes < 0 ? 'Vencido' : diasFaltantes === 0 ? '¡HOY!' : `${diasFaltantes} días`}
-                      </span>
-                    </div>
+                    <div className="flex justify-between items-start mb-1"><span className="text-white font-bold text-xs truncate max-w-[70%]">{p.cliente}</span><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${isUrgent ? 'bg-red-500 text-white' : 'bg-[#222] text-gray-400'}`}>{diasFaltantes < 0 ? 'Vencido' : diasFaltantes === 0 ? '¡HOY!' : `${diasFaltantes} días`}</span></div>
                     <p className="text-[10px] text-gray-500 truncate">{p.detalle}</p>
                  </div>
                );
              }) : (
-               <div className="h-full flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-[#222] rounded-xl">
-                  <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">No hay fechas límite<br/>próximas registradas.</p>
-               </div>
+               <div className="h-full flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-[#222] rounded-xl"><p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">No hay fechas límite<br/>próximas registradas.</p></div>
              )}
            </div>
-           <button onClick={() => setActiveTab('pedidos')} className="mt-4 w-full bg-[#111] hover:bg-[#222] border border-[#333] text-gray-400 text-[9px] uppercase font-bold py-2.5 rounded-lg transition-colors">
-             Ver Todos los Pedidos
-           </button>
+           <button onClick={() => setActiveTab('pedidos')} className="mt-4 w-full bg-[#111] hover:bg-[#222] border border-[#333] text-gray-400 text-[9px] uppercase font-bold py-2.5 rounded-lg transition-colors">Ver Todos los Pedidos</button>
         </div>
-        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
-           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Métricas Financieras</h3>
-           <ChartCanvas type="bar" data={barChartData} options={chartOptions} height={200} />
-        </div>
-        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg">
-           <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Status de Proyectos</h3>
-           <ChartCanvas type="doughnut" data={pieChartData} options={pieOptions} height={200} />
-        </div>
+        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg"><h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Métricas Financieras</h3><ChartCanvas type="bar" data={barChartData} options={chartOptions} height={200} /></div>
+        <div className="w-full lg:w-1/3 glass-panel border border-[#333] rounded-[2rem] p-6 shadow-lg"><h3 className="text-white font-black text-sm uppercase tracking-widest mb-4">Status de Proyectos</h3><ChartCanvas type="doughnut" data={pieChartData} options={pieOptions} height={200} /></div>
       </div>
     </div>
   );
@@ -437,21 +344,15 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
   const limpiarForm = () => { 
-      setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); 
-      setGastoCategoria('Otros'); setIdInsumo(''); setCantidadInsumo('');
-      setEditId(null); setTipo('Ingreso'); 
+      setMonto(''); setConcepto(''); setOrigen('Caja Negocio'); setGastoCategoria('Otros'); setIdInsumo(''); setCantidadInsumo(''); setEditId(null); setTipo('Ingreso'); 
   };
   
   const guardarMovimiento = () => {
     if (!monto || !concepto) return showToast('Faltan datos', 'error');
     
     const data = { 
-        tipo, 
-        monto: Number(monto) || 0, 
-        concepto, 
-        origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), 
-        registradoPor: loggedUser,
-        categoriaGasto: tipo === 'Gasto' ? gastoCategoria : null,
+        tipo, monto: Number(monto) || 0, concepto, origen: (tipo === 'Ingreso' ? 'Caja Negocio' : origen), 
+        registradoPor: loggedUser, categoriaGasto: tipo === 'Gasto' ? gastoCategoria : null,
         idInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? idInsumo : null,
         cantidadInsumo: tipo === 'Gasto' && gastoCategoria === 'Insumo' ? (Number(cantidadInsumo) || 0) : null
     };
@@ -462,76 +363,37 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
             if(doc.exists) {
                 const actual = Number(doc.data().cantidad) || 0;
                 const nuevoCostoU = Math.round((Number(monto) || 0) / (Number(cantidadInsumo) || 1));
-                itemRef.update({ 
-                    cantidad: actual + Number(cantidadInsumo),
-                    costoUnitario: nuevoCostoU
-                });
+                itemRef.update({ cantidad: actual + Number(cantidadInsumo), costoUnitario: nuevoCostoU });
             }
         });
     }
 
-    if (editId) {
-        db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); });
-    } else {
-        db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); });
-    }
+    if (editId) { db.collection('finanzas').doc(editId).update(data).then(() => { showToast('Actualizado'); limpiarForm(); }); } 
+    else { db.collection('finanzas').add({ ...data, fecha: new Date().toISOString() }).then(() => { showToast('Guardado'); limpiarForm(); }); }
   };
 
   const eliminarMov = (id) => {
       const f = finanzas.find(x => x.id === id);
       if (f && f.tipo === 'Gasto' && f.categoriaGasto === 'Insumo' && f.idInsumo && f.cantidadInsumo) {
           const itemRef = db.collection('inventario').doc(f.idInsumo);
-          itemRef.get().then(doc => {
-              if (doc.exists) {
-                  const actual = Number(doc.data().cantidad) || 0;
-                  itemRef.update({ cantidad: Math.max(0, actual - Number(f.cantidadInsumo)) });
-              }
-          });
+          itemRef.get().then(doc => { if (doc.exists) { const actual = Number(doc.data().cantidad) || 0; itemRef.update({ cantidad: Math.max(0, actual - Number(f.cantidadInsumo)) }); } });
       }
       db.collection('finanzas').doc(id).delete().then(() => { showToast('Eliminado (Stock restaurado)', 'success'); setDeleteId(null); });
   };
   
-  const cargarParaEditar = (f) => { 
-      setTipo(f.tipo || 'Ingreso'); 
-      setMonto(f.monto || ''); 
-      setConcepto(f.concepto || ''); 
-      setOrigen(f.origen || 'Caja Negocio'); 
-      setGastoCategoria(f.categoriaGasto || 'Otros'); 
-      setIdInsumo(f.idInsumo || ''); 
-      setCantidadInsumo(f.cantidadInsumo || '');
-      setEditId(f.id); 
-      window.scrollTo({ top: 0, behavior: 'smooth' }); 
-  };
-  
-  const exportarCSV = () => {
-    let csv = "Fecha,Tipo,Categoria,Origen/Destino,Concepto,Monto ($),Operador\n";
-    safeFinanzas.forEach(f => { 
-      csv += `"${f.fecha ? new Date(f.fecha).toLocaleDateString() : 'Sin Fecha'}","${f.tipo || ''}","${f.categoriaGasto || ''}","${f.origen || 'Caja Negocio'}","${f.concepto || ''}","${f.monto || 0}","${f.registradoPor || ''}"\n`; 
-    });
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_Caja.csv`; link.click();
-  };
+  const cargarParaEditar = (f) => { setTipo(f.tipo || 'Ingreso'); setMonto(f.monto || ''); setConcepto(f.concepto || ''); setOrigen(f.origen || 'Caja Negocio'); setGastoCategoria(f.categoriaGasto || 'Otros'); setIdInsumo(f.idInsumo || ''); setCantidadInsumo(f.cantidadInsumo || ''); setEditId(f.id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const exportarCSV = () => { let csv = "Fecha,Tipo,Categoria,Origen/Destino,Concepto,Monto ($),Operador\n"; safeFinanzas.forEach(f => { csv += `"${f.fecha ? new Date(f.fecha).toLocaleDateString() : 'Sin Fecha'}","${f.tipo || ''}","${f.categoriaGasto || ''}","${f.origen || 'Caja Negocio'}","${f.concepto || ''}","${f.monto || 0}","${f.registradoPor || ''}"\n`; }); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_Caja.csv`; link.click(); };
 
   const safeFinanzas = finanzas || [];
-
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); 
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
 
-  const listOrdenada = [...safeFinanzas].sort((a,b) => {
-      const tA = a.fecha ? new Date(a.fecha).getTime() : 0;
-      const tB = b.fecha ? new Date(b.fecha).getTime() : 0;
-      return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
-  });
-  
+  const listOrdenada = [...safeFinanzas].sort((a,b) => { const tA = a.fecha ? new Date(a.fecha).getTime() : 0; const tB = b.fecha ? new Date(b.fecha).getTime() : 0; return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB); });
   listOrdenada.forEach(f => {
       let isNew = false;
-      if (f.fecha) {
-         const t = new Date(f.fecha).getTime();
-         if (!isNaN(t) && t >= FECHA_CORTE) isNew = true;
-      }
-      
+      if (f.fecha) { const t = new Date(f.fecha).getTime(); if (!isNaN(t) && t >= FECHA_CORTE) isNew = true; }
       const m = Number(f.monto) || 0;
-
       if (f.tipo === 'Ingreso') {
           cajaFisicaGlobal += m;
           if (isNew) {
@@ -539,10 +401,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
               if (deudaE > 0 || deudaG > 0) {
                   let mitad = disp / 2; let pE = Math.min(deudaE, mitad); let pG = Math.min(deudaG, mitad);
                   deudaE -= pE; deudaG -= pG; disp -= (pE + pG);
-                  if (disp > 0) {
-                      if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; }
-                      if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; }
-                  }
+                  if (disp > 0) { if (deudaE > 0) { let ex = Math.min(deudaE, disp); deudaE -= ex; disp -= ex; } if (deudaG > 0) { let ex = Math.min(deudaG, disp); deudaG -= ex; disp -= ex; } }
               }
               if (disp > 0) fondoTaller += disp * 0.40;
           }
@@ -550,43 +409,24 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           if (isNew && f.categoriaGasto === 'Insumo') gastosInsumosNuevo += m;
           if (isNew && f.categoriaGasto === 'Maquinaria') gastosMaquinariaNuevo += m;
           if (isNew && (!f.categoriaGasto || f.categoriaGasto === 'Otros')) gastosOtrosNuevo += m;
-
-          if (f.origen === 'Caja Negocio' || !f.origen) {
-              cajaFisicaGlobal -= m;
-              if (isNew) fondoTaller -= m;
-          } else if (f.origen === 'Emanuel') {
-              if (isNew) deudaE += m;
-          } else if (f.origen === 'Gonzalo') {
-              if (isNew) deudaG += m;
-          }
+          if (f.origen === 'Caja Negocio' || !f.origen) { cajaFisicaGlobal -= m; if (isNew) fondoTaller -= m; } 
+          else if (f.origen === 'Emanuel') { if (isNew) deudaE += m; } 
+          else if (f.origen === 'Gonzalo') { if (isNew) deudaG += m; }
       }
   });
 
-  let simMonto = Number(monto) || 0;
-  let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
-
+  let simMonto = Number(monto) || 0; let simDeudaE = 0, simDeudaG = 0, simFondo = 0, simDivE = 0, simDivG = 0;
   if (tipo === 'Ingreso' && simMonto > 0) {
-      let tDeudaE = deudaE; let tDeudaG = deudaG;
-      let disp = simMonto;
-
+      let tDeudaE = deudaE; let tDeudaG = deudaG; let disp = simMonto;
       if (tDeudaE > 0 || tDeudaG > 0) {
-          let mitad = disp / 2;
-          let pE = Math.min(tDeudaE, mitad); let pG = Math.min(tDeudaG, mitad);
-          simDeudaE += pE; simDeudaG += pG;
-          tDeudaE -= pE; tDeudaG -= pG; disp -= (pE + pG);
-          if (disp > 0) {
-              if (tDeudaE > 0) { let ex = Math.min(tDeudaE, disp); simDeudaE += ex; disp -= ex; }
-              if (tDeudaG > 0) { let ex = Math.min(tDeudaG, disp); simDeudaG += ex; disp -= ex; }
-          }
+          let mitad = disp / 2; let pE = Math.min(tDeudaE, mitad); let pG = Math.min(tDeudaG, mitad);
+          simDeudaE += pE; simDeudaG += pG; tDeudaE -= pE; tDeudaG -= pG; disp -= (pE + pG);
+          if (disp > 0) { if (tDeudaE > 0) { let ex = Math.min(tDeudaE, disp); simDeudaE += ex; disp -= ex; } if (tDeudaG > 0) { let ex = Math.min(tDeudaG, disp); simDeudaG += ex; disp -= ex; } }
       }
       if (disp > 0) { simFondo = disp * 0.40; simDivE = disp * 0.30; simDivG = disp * 0.30; }
   }
 
-  const listInversa = [...listOrdenada].reverse().filter(f => {
-     if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso';
-     if(filtroCaja === 'Gastos') return f.tipo === 'Gasto';
-     return true;
-  });
+  const listInversa = [...listOrdenada].reverse().filter(f => { if(filtroCaja === 'Ingresos') return f.tipo === 'Ingreso'; if(filtroCaja === 'Gastos') return f.tipo === 'Gasto'; return true; });
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
@@ -775,18 +615,11 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   }, [pedidoToEdit, pedidos]);
 
   const limpiarForm = () => { 
-    setCliente(''); setDetalle(''); setPrioridad('Media'); 
-    setUrlArchivo(''); setCelular(''); setPrecioTotal(''); 
-    setSena(''); setFechaLimite(''); setInsumosUsados([]);
-    setEditId(null); setShowForm(false); 
+    setCliente(''); setDetalle(''); setPrioridad('Media'); setUrlArchivo(''); setCelular(''); setPrecioTotal(''); setSena(''); setFechaLimite(''); setInsumosUsados([]); setEditId(null); setShowForm(false); 
   };
 
   const addInsumo = () => setInsumosUsados([...insumosUsados, { idInsumo: '', cantidad: '' }]);
-  const updateInsumo = (index, field, val) => {
-      const arr = [...insumosUsados];
-      arr[index][field] = val;
-      setInsumosUsados(arr);
-  };
+  const updateInsumo = (index, field, val) => { const arr = [...insumosUsados]; arr[index][field] = val; setInsumosUsados(arr); };
   const removeInsumo = (index) => setInsumosUsados(insumosUsados.filter((_, i) => i !== index));
 
   const procesarDescuentoInventario = () => {
@@ -794,11 +627,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
           if (ins.idInsumo && (Number(ins.cantidad)||0) > 0) {
              const itemRef = db.collection('inventario').doc(ins.idInsumo);
              itemRef.get().then(doc => {
-                 if (doc.exists) {
-                     const currentCant = Number(doc.data().cantidad) || 0;
-                     const nuevaCant = currentCant - Number(ins.cantidad);
-                     itemRef.update({ cantidad: Math.max(0, nuevaCant) });
-                 }
+                 if (doc.exists) { const currentCant = Number(doc.data().cantidad) || 0; const nuevaCant = currentCant - Number(ins.cantidad); itemRef.update({ cantidad: Math.max(0, nuevaCant) }); }
              });
           }
       });
@@ -807,19 +636,12 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   const guardarPedido = () => {
     if (!cliente || !detalle) return showToast('Faltan datos del cliente', 'error');
     const baseChecklist = { corte: false, lija: false, pintura: false, armado: false };
-    
-    const data = { 
-      cliente, detalle, prioridad, urlArchivo, celular, 
-      precioTotal: Number(precioTotal) || 0, sena: Number(sena) || 0, 
-      fechaLimite: fechaLimite || null 
-    };
+    const data = { cliente, detalle, prioridad, urlArchivo, celular, precioTotal: Number(precioTotal) || 0, sena: Number(sena) || 0, fechaLimite: fechaLimite || null };
     
     if (editId) {
-      db.collection('pedidos').doc(editId).update(data)
-        .then(() => { procesarDescuentoInventario(); showToast('Pedido actualizado y stock descontado'); limpiarForm(); })
+      db.collection('pedidos').doc(editId).update(data).then(() => { procesarDescuentoInventario(); showToast('Pedido actualizado y stock descontado'); limpiarForm(); })
     } else {
-      db.collection('pedidos').add({ ...data, estado: 'Pendiente', checklist: baseChecklist, fecha: new Date().toISOString(), registradoPor: loggedUser })
-        .then(() => { procesarDescuentoInventario(); showToast('Pedido cargado y stock descontado'); limpiarForm(); })
+      db.collection('pedidos').add({ ...data, estado: 'Pendiente', checklist: baseChecklist, fecha: new Date().toISOString(), registradoPor: loggedUser }).then(() => { procesarDescuentoInventario(); showToast('Pedido cargado y stock descontado'); limpiarForm(); })
     }
   };
 
@@ -836,13 +658,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
 
   const eliminarPedido = (id) => db.collection('pedidos').doc(id).delete().then(() => { showToast('Pedido eliminado'); setDeleteId(null); });
 
-  const cargarParaEditar = (p) => { 
-    setCliente(p.cliente); setDetalle(p.detalle); setPrioridad(p.prioridad || 'Media'); 
-    setUrlArchivo(p.urlArchivo || ''); setCelular(p.celular || ''); 
-    setPrecioTotal(p.precioTotal || ''); setSena(p.sena || ''); 
-    setFechaLimite(p.fechaLimite || ''); setInsumosUsados([]); 
-    setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); 
-  };
+  const cargarParaEditar = (p) => { setCliente(p.cliente); setDetalle(p.detalle); setPrioridad(p.prioridad || 'Media'); setUrlArchivo(p.urlArchivo || ''); setCelular(p.celular || ''); setPrecioTotal(p.precioTotal || ''); setSena(p.sena || ''); setFechaLimite(p.fechaLimite || ''); setInsumosUsados([]); setEditId(p.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   const enviarWhatsApp = (p) => {
     const resto = (Number(p.precioTotal) || 0) - (Number(p.sena) || 0);
@@ -862,13 +678,11 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
             <img src="${TICKET_LOGO_URL}?t=${new Date().getTime()}" crossorigin="anonymous" style="max-height: 70px; margin-bottom: 10px;" />
             <h2 style="margin: 0; font-size: 22px; color: #000; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;">REMITO DE ENTREGA & GARANTÍA</h2>
           </div>
-          
           <div style="margin-bottom: 25px;">
              <p style="margin: 5px 0; font-size: 15px;"><strong>Cliente:</strong> ${p.cliente}</p>
              <p style="margin: 5px 0; font-size: 15px;"><strong>Fecha de Entrega:</strong> ${new Date().toLocaleDateString()}</p>
              <p style="margin: 5px 0; font-size: 15px;"><strong>Detalle del Trabajo:</strong> ${p.detalle}</p>
           </div>
-
           <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #eee;">
              <h3 style="margin: 0 0 10px 0; font-size: 16px; text-transform: uppercase;">Resumen de Saldos</h3>
              <p style="margin: 5px 0; font-size: 14px;">Total Presupuestado: $${Number(p.precioTotal).toLocaleString('es-AR')}</p>
@@ -877,7 +691,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                 Saldo a Pagar al Retirar: $${resto.toLocaleString('es-AR')}
              </p>
           </div>
-
           <div style="background-color: #111; color: #fff; padding: 25px; border-radius: 15px;">
              <h3 style="margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; color: #e2ff00; letter-spacing: 1px;">Recomendaciones de Cuidado</h3>
              <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8;">
@@ -887,7 +700,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                 <li><strong>Instalación Eléctrica:</strong> Ante cualquier anomalía con la fuente de alimentación, desconectar inmediatamente y contactarnos.</li>
              </ul>
           </div>
-          
           <div style="text-align: center; margin-top: 30px;">
             <p style="font-size: 12px; color: #444; font-weight: bold; margin: 0;">¡Gracias por confiar en PolyfanTech!</p>
             <p style="font-size: 11px; color: #888; margin-top: 5px;">Recreo - Catamarca</p>
@@ -906,8 +718,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
   };
 
   const safePedidos = pedidos || [];
-  const safeInventario = inventario || []; 
-
   const pedidosFiltrados = safePedidos
     .filter(p => p.estado === filtro)
     .filter(p => (p.cliente || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.detalle || '').toLowerCase().includes(busqueda.toLowerCase()))
@@ -962,7 +772,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
                   <div key={i} className="flex gap-2 items-center mb-2">
                       <select value={ins.idInsumo} onChange={e => updateInsumo(i, 'idInsumo', e.target.value)} className="flex-1 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none focus:border-[#e2ff00]">
                           <option value="">Seleccionar Material...</option>
-                          {safeInventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
+                          {inventario.map(inv => <option key={inv.id} value={inv.id}>{inv.nombre} ({inv.cantidad} disp.)</option>)}
                       </select>
                       <input type="number" value={ins.cantidad} onChange={e => updateInsumo(i, 'cantidad', e.target.value)} placeholder="Cant." className="w-16 glass-panel bg-[#0a0a0a] border border-[#333] rounded-lg p-2 text-[10px] text-white outline-none text-center" />
                       <button onClick={() => removeInsumo(i)} className="w-7 h-7 bg-red-900/30 text-red-500 rounded flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors">X</button>
@@ -1018,7 +828,6 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
               </div>
               <p className="text-sm md:text-base text-gray-300 my-4 bg-[#0a0a0a]/50 p-4 rounded-xl border border-[#222]/50 leading-relaxed">{p.detalle}</p>
               
-              {/* FUNCION PREMIUM: Checklist Trazabilidad Taller (Sólo En Proceso) */}
               {p.estado === 'En Proceso' && (
                  <div className="mb-4 bg-[#050505]/80 border border-[#333] p-4 rounded-xl">
                     <p className="text-[9px] text-[#e2ff00] uppercase font-black tracking-widest mb-3 flex items-center gap-1"><IconCheck /> Trazabilidad de Taller</p>
@@ -1259,7 +1068,7 @@ function InventarioView({ inventario, showToast }) {
 
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
-  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbx4EpYrULxmer6dAvmFabE4S1GXv_9ngThHmQZEMNTLMCrsrhuh5FUKBTWBBG30J6NE/execI"; 
+  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbx4EpYrULxmer6dAvmFabE4S1GXv_9ngThHmQZEMNTLMCrsrhuh5FUKBTWBBG30J6NE/exec"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
@@ -1349,7 +1158,7 @@ function PresupuestoView({ showToast, loggedUser }) {
      }
      
      if (URL_BACKEND_GAS.includes("PEGAR_URL_DE_APPS_SCRIPT_AQUI")) {
-         return showToast("Falta URL de Apps Script", "error");
+         return showToast("Falta URL de Apps Script en app.js", "error");
      }
 
      setGenerandoIA(true);
@@ -1365,10 +1174,9 @@ function PresupuestoView({ showToast, loggedUser }) {
      "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? ` (SÍ LLEVA: Incluye ${betaMetrosLed}m de tira LED, ${betaMetrosCable}m de cable cristal, soportes 3D y fuente)` : " (NO LLEVA LUZ)") + ".\n" +
      "Nivel de Instalación: " + betaInstalacion + ".";
 
-     // Conexión segura usando la configuración GET (text/plain) para evitar CORS en Google
+     // Petición POST ciega (sin headers de content-type) para forzar text/plain y saltar CORS
      fetch(URL_BACKEND_GAS, {
        method: "POST",
-       headers: { "Content-Type": "text/plain;charset=utf-8" },
        body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
      })
      .then(res => res.json())
@@ -1377,7 +1185,7 @@ function PresupuestoView({ showToast, loggedUser }) {
            setBetaRespuestaIA(data.text); 
            showToast("Propuesta generada con éxito"); 
        } else { 
-           showToast("Error de la IA: " + data.error, "error"); 
+           showToast("Error Servidor: " + data.error, "error"); 
        }
        setGenerandoIA(false);
      }).catch(err => { 
@@ -1396,17 +1204,17 @@ function PresupuestoView({ showToast, loggedUser }) {
             <img src="${TICKET_LOGO_URL}?t=${new Date().getTime()}" crossorigin="anonymous" style="max-height: 60px; margin-bottom: 10px;" />
             <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">PROPUESTA DE PROYECTO</h2>
           </div>
-          <div style="font-size: 13px; line-height: 1.6; color: #222;">${betaRespuestaIA}</div>
+          <div id="ticket-beta-content" style="font-size: 13px; line-height: 1.6; color: #222;">${betaRespuestaIA}</div>
           <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-            <span style="color: #666;">Tiempo de entrega:</span><span style="font-weight: bold; text-align: right;">${betaTiempo}</span>
+            <span style="color: #666;">Tiempo de entrega:</span><span style="font-weight: bold; color: #111; text-align: right;">${betaTiempo}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-            <span style="color: #666;">Formas de pago:</span><span style="font-weight: bold; text-align: right;">${betaPagos}</span>
+            <span style="color: #666;">Formas de pago:</span><span style="font-weight: bold; color: #111; text-align: right;">${betaPagos}</span>
           </div>
           <div style="background: #000; color: #fff; padding: 25px; border-radius: 15px; margin: 25px 0; text-align: center;">
             <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
-            <p style="margin: 10px 0 0 0; font-size: 42px; font-weight: 900;">$${Number(betaPrecioAjustado).toLocaleString('es-AR')}</p>
+            <p style="margin: 10px 0 0 0; font-size: 42px; font-weight: 900; color: #fff;">$${Number(betaPrecioAjustado).toLocaleString('es-AR')}</p>
           </div>
           <div style="text-align: center; margin-top: 30px;">
             <p style="font-size: 10px; color: #aaa; margin: 0 0 4px 0;">Sujeto a cambios según diseño y detalles finales</p>
@@ -1416,6 +1224,12 @@ function PresupuestoView({ showToast, loggedUser }) {
       `;
       const element = document.createElement('div'); element.innerHTML = htmlContent; 
       element.style.position = 'absolute'; element.style.top = '0px'; element.style.left = '0px'; element.style.zIndex = '99990'; 
+      // Forzar colores oscuros SOLO para la exportación PDF/PNG
+      const els = element.querySelectorAll('h3, p, li, div');
+      els.forEach(el => {
+          if (el.tagName === 'H3') el.style.setProperty('color', '#000', 'important');
+          if (el.tagName === 'P' || el.tagName === 'LI') el.style.setProperty('color', '#444', 'important');
+      });
       document.body.appendChild(element);
       const posPrevia = window.scrollY; window.scrollTo(0, 0);
       
@@ -1446,32 +1260,32 @@ function PresupuestoView({ showToast, loggedUser }) {
           <h2 style="margin: 0; font-size: 18px; color: #000; text-transform: uppercase; font-weight: 900;">EXPRESS BUDGETER SYSTEM 3.0</h2>
           <div style="border-top: 2px dashed #ddd; border-bottom: 2px dashed #ddd; padding: 20px 0; margin-top: 20px; text-align: left;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Dimensiones:</span><span style="font-weight: bold;">${crAncho}m x ${crAlto}m</span>
+              <span style="color: #666;">Dimensiones:</span><span style="font-weight: bold; color: #111;">${crAncho}m x ${crAlto}m</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Frente / Letras:</span><span style="font-weight: bold;">Polyfan ${crEspesorFrente}</span>
+              <span style="color: #666;">Frente / Letras:</span><span style="font-weight: bold; color: #111;">Polyfan ${crEspesorFrente}</span>
             </div>
             ${crEspesorFondo !== 'Ninguno' ? `
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Fondo / Base:</span><span style="font-weight: bold;">Polyfan ${crEspesorFondo}</span>
+              <span style="color: #666;">Fondo / Base:</span><span style="font-weight: bold; color: #111;">Polyfan ${crEspesorFondo}</span>
             </div>
             ` : ''}
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Tratamiento:</span><span style="font-weight: bold;">${crExterior === 'Si' ? 'Apto Exterior' : 'Interior'}</span>
+              <span style="color: #666;">Tratamiento:</span><span style="font-weight: bold; color: #111;">${crExterior === 'Si' ? 'Apto Exterior' : 'Interior'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Iluminación:</span><span style="font-weight: bold;">${crLeds === 'Si' ? 'Con LED + Soportes 3D' : 'Sin Luces'}</span>
+              <span style="color: #666;">Iluminación:</span><span style="font-weight: bold; color: #111;">${crLeds === 'Si' ? 'Con LED + Soportes 3D' : 'Sin Luces'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
-              <span style="color: #666;">Colocación:</span><span style="font-weight: bold;">${crInstalacion}</span>
+              <span style="color: #666;">Colocación:</span><span style="font-weight: bold; color: #111;">${crInstalacion}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="color: #666;">Diseño y Vectorización:</span><span style="font-weight: bold;">${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}</span>
+              <span style="color: #666;">Diseño y Vectorización:</span><span style="font-weight: bold; color: #111;">${crDiseno === 'Si' ? 'Incluido' : 'Provisto por cliente'}</span>
             </div>
           </div>
           <div style="background: #000; color: #fff; padding: 20px; border-radius: 15px; margin: 25px 0;">
             <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #e2ff00;">PRECIO FINAL</p>
-            <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
+            <p style="margin: 5px 0 0 0; font-size: 36px; font-weight: 900; color: #fff;">$${Number(precioAjustado).toLocaleString('es-AR')}</p>
           </div>
           <p style="font-size: 10px; color: #aaa; margin-bottom: 3px;">Sujeto a cambios según diseño y detalles finales</p>
           <p style="font-size: 11px; color: #666; font-weight: bold; margin-top: 0;">Polyfan Tech | Corpóreos y Diseños | Recreo - Catamarca</p>
@@ -1504,16 +1318,16 @@ function PresupuestoView({ showToast, loggedUser }) {
           
           <h3 style="background-color: #000; color: #fff; padding: 5px 10px; font-size: 14px; margin-top: 20px; text-transform: uppercase;">Materiales a Cortar</h3>
           <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
-            <li><strong>Frente:</strong> ${placasEstimadasFrente} placa/s de Polyfan ${crEspesorFrente}</li>
-            ${crEspesorFondo !== 'Ninguno' ? `<li><strong>Fondo:</strong> ${placasEstimadasFondo} placa/s de Polyfan ${crEspesorFondo}</li>` : ''}
+            <li style="color: #000;"><strong>Frente:</strong> ${placasEstimadasFrente} placa/s de Polyfan ${crEspesorFrente}</li>
+            ${crEspesorFondo !== 'Ninguno' ? `<li style="color: #000;"><strong>Fondo:</strong> ${placasEstimadasFondo} placa/s de Polyfan ${crEspesorFondo}</li>` : ''}
           </ul>
           
           <h3 style="background-color: #000; color: #fff; padding: 5px 10px; font-size: 14px; margin-top: 20px; text-transform: uppercase;">Terminaciones y Extras</h3>
           <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
-            <li><strong>Exterior:</strong> ${crExterior === 'Si' ? '[x] SÍ (Aplicar Masilla y Laca)' : '[ ] NO (Interior)'}</li>
-            <li><strong>Iluminación:</strong> ${crLeds === 'Si' ? `[x] SÍ (Cortar ~${crMetrosLed}m LED, usar ~${crMetrosCable}m Cable Cristal)` : '[ ] NO'}</li>
-            <li><strong>Colocación:</strong> ${crInstalacion}</li>
-            <li><strong>Diseño:</strong> ${crDiseno === 'Si' ? 'Armar vectores' : 'Archivo provisto listo para corte'}</li>
+            <li style="color: #000;"><strong>Exterior:</strong> ${crExterior === 'Si' ? '[x] SÍ (Aplicar Masilla y Laca)' : '[ ] NO (Interior)'}</li>
+            <li style="color: #000;"><strong>Iluminación:</strong> ${crLeds === 'Si' ? `[x] SÍ (Cortar ~${crMetrosLed}m LED, usar ~${crMetrosCable}m Cable Cristal)` : '[ ] NO'}</li>
+            <li style="color: #000;"><strong>Colocación:</strong> ${crInstalacion}</li>
+            <li style="color: #000;"><strong>Diseño:</strong> ${crDiseno === 'Si' ? 'Armar vectores' : 'Archivo provisto listo para corte'}</li>
           </ul>
 
           <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
