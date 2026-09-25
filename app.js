@@ -51,6 +51,7 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
+// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -1355,6 +1356,7 @@ function PresupuestoView({ showToast, loggedUser }) {
      "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? ` (SÍ LLEVA: Incluye ${betaMetrosLed}m de tira LED, ${betaMetrosCable}m de cable cristal, soportes 3D y fuente)` : " (NO LLEVA LUZ)") + ".\n" +
      "Nivel de Instalación: " + betaInstalacion + ".";
 
+     // Conexión segura usando la configuración GET (text/plain) que no dispara preflight de CORS
      fetch(URL_BACKEND_GAS, {
        method: "POST",
        headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -1362,10 +1364,17 @@ function PresupuestoView({ showToast, loggedUser }) {
      })
      .then(res => res.json())
      .then(data => {
-       if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada con éxito"); }
-       else { showToast("Error IA: " + data.error, "error"); }
+       if(data.success) { 
+           setBetaRespuestaIA(data.text); 
+           showToast("Propuesta generada con éxito"); 
+       } else { 
+           showToast("Error IA: " + data.error, "error"); 
+       }
        setGenerandoIA(false);
-     }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
+     }).catch(err => { 
+         showToast("Falla de red o CORS en Apps Script.", "error"); 
+         setGenerandoIA(false); 
+     });
   };
 
   const exportarTicketBeta = () => {
