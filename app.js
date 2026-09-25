@@ -1404,7 +1404,7 @@ function PresupuestoView({ showToast, loggedUser }) {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
          
          // ALGORITMO EN CASCADA PARA EVITAR ERRORES DE API
-         const modelosFallbacks = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"];
+         const modelosFallbacks = ["gemini-1.5-flash"];
          let respuestaExitosa = null;
          let ultimoError = null;
 
