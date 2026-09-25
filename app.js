@@ -1252,7 +1252,7 @@ function InventarioView({ inventario, showToast }) {
 
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
-  const URL_BACKEND_GAS = "PEGAR_URL_DE_APPS_SCRIPT_AQUI"; 
+  const URL_BACKEND_GAS = "https://script.google.com/macros/s/AKfycbyo4PVSzRswm-L76O9XTk9uxh9ci1_GKDtSPLZknIGYNLKODvgVAyHwGLbmhYXQU87W/exec"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
