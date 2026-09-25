@@ -3,9 +3,9 @@ const { useState, useEffect, useMemo, useRef } = React;
 const db = window.db; 
 
 // --- LOGOS DEL SISTEMA ---
-const APP_LOGO_URL = "https://i.imgur.com/YjSvTHr.png"; 
-const TICKET_LOGO_URL = "https://i.imgur.com/ytru7Zu.png"; 
-const NOVABIT_LOGO_URL = "https://i.imgur.com/Bh3Dm7l.png";
+const APP_LOGO_URL = "[https://i.imgur.com/YjSvTHr.png](https://i.imgur.com/YjSvTHr.png)"; 
+const TICKET_LOGO_URL = "[https://i.imgur.com/ytru7Zu.png](https://i.imgur.com/ytru7Zu.png)"; 
+const NOVABIT_LOGO_URL = "[https://i.imgur.com/Bh3Dm7l.png](https://i.imgur.com/Bh3Dm7l.png)";
 const PASS_ACCESO = "polyfan2026";
 
 // --- ÍCONOS COMPARTIDOS ---
@@ -51,7 +51,6 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
-// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -257,7 +256,7 @@ function DashboardView({ finanzas, pedidos, inventario, prospectos, setActiveTab
     if (stockCritico.length === 0) return;
     const faltantes = stockCritico.map(i => `- ${i.nombre}: Quedan ${i.cantidad}${formatUnidad(i.unidad)}`).join('\n');
     const msj = `*LISTA DE COMPRAS - POLYFANTECH* 🛒\n\nHola! Necesitamos reponer urgentemente los siguientes insumos que llegaron a su límite:\n\n${faltantes}\n\nPor favor pasame presupuesto. ¡Gracias!`;
-    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msj), "_blank");
+    window.open("[https://api.whatsapp.com/send?text=](https://api.whatsapp.com/send?text=)" + encodeURIComponent(msj), "_blank");
   };
 
   const barChartData = {
@@ -426,9 +425,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
   useEffect(() => {
     if (tipo === 'Gasto' && gastoCategoria === 'Insumo' && idInsumo) {
         const ins = safeInventario.find(i => i.id === idInsumo);
-        if (ins) {
-            setConcepto(`Ingreso Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
-        }
+        if (ins) setConcepto(`Stock: +${cantidadInsumo || 0} ${ins.nombre}`);
     }
   }, [idInsumo, cantidadInsumo, tipo, gastoCategoria]);
 
@@ -647,7 +644,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -845,7 +842,7 @@ function PedidosView({ pedidos, inventario, loggedUser, showToast, pedidoToEdit,
     let texto = `Hola *${p.cliente}*! 👋 Somos PolyfanTech.\n\nTe avisamos que tu trabajo (${p.detalle}) está: *${p.estado}*.\n`;
     if(resto > 0) texto += `\n*Saldo pendiente al entregar:* $${resto.toLocaleString('es-AR')}\n`;
     texto += `\nCualquier consulta avisanos!`;
-    window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
+    window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent(texto), "_blank");
   };
 
   const exportarRemitoGarantia = (p) => {
@@ -1151,7 +1148,7 @@ function ProspectosView({ prospectos, loggedUser, showToast, setActiveTab, setPe
               <p className="text-sm text-gray-300 mb-4 mt-2 bg-[#0a0a0a]/50 p-3 rounded-xl border border-[#222]/50">{p.interes}</p>
             </div>
             <div className="flex gap-2 mt-auto">
-              <button onClick={() => window.open("https://api.whatsapp.com/send?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
+              <button onClick={() => window.open("[https://api.whatsapp.com/send](https://api.whatsapp.com/send)?" + (p.celular ? "phone=" + p.celular + "&" : "") + "text=" + encodeURIComponent("Hola! Te comparto nuestro portfolio..."), "_blank")} className="flex-1 bg-[#1a2e1a] text-green-400 text-[9px] uppercase font-bold py-3 rounded-xl border border-green-900/30 flex items-center justify-center gap-1 hover:bg-[#203a20] transition-colors"><IconWhatsApp /> Enviar Portfolio</button>
               <button onClick={() => convertirAPedido(p)} className="flex-1 bg-[#e2ff00]/10 text-[#e2ff00] text-[9px] uppercase font-black py-3 rounded-xl border border-[#e2ff00]/30 hover:bg-[#e2ff00]/20 transition-colors">Venta Cerrada</button>
             </div>
           </div>
@@ -1255,6 +1252,7 @@ function InventarioView({ inventario, showToast }) {
 
 function PresupuestoView({ showToast, loggedUser }) {
   const [modoCotizador, setModoCotizador] = useState('Rapido');
+  const URL_BACKEND_GAS = "PEGAR_URL_DE_APPS_SCRIPT_AQUI"; 
   
   const COSTOS_EXPRESS = { gananciaPorPlaca: 10000, costoPlacaNeto: { '20mm': 13500, '30mm': 28000, '40mm': 37300, '50mm': 46200, 'Ninguno': 0 }, valorHora: 6500, precioMetroLed: 4500, precioFuente: 18000, costoSoporte3D: 1200, instalacionBasica: 25000, instalacionAltura: 55000 };
   const COSTOS_BETA = { gananciaPorPlaca: 15000, costoPlacaNeto: { '20mm': 13000, '30mm': 20100, '40mm': 26900, '50mm': 32300 }, precioViniloM2: 55000, fijoPintura: 10000, fijoLuzMaquinas: 40000, fijoManoDeObra: 35000, fijoPegamento: 10000, adicionalExterior: 30000, precioMetroLed: 8900, precioMetroCable: 4000, fijoSoportes3D: 25000, fijoFuenteLuz: 50000, instalacionNormal: 30000, instalacionAltura: 50000 };
@@ -1338,7 +1336,7 @@ function PresupuestoView({ showToast, loggedUser }) {
   const handleRemoveBetaPlaca = (id) => setBetaPlacas(betaPlacas.filter(p => p.id !== id));
   const handleUpdateBetaPlaca = (id, field, value) => setBetaPlacas(betaPlacas.map(p => p.id === id ? { ...p, [field]: value } : p));
 
-  const generarPropuestaIA = async () => {
+  const generarPropuestaIA = () => {
      const placasValidas = betaPlacas.filter(p => (parseFloat(p.cantidad)||0) > 0);
      if(!betaCliente || !betaTrabajo || placasValidas.length === 0 || !betaAncho || !betaAlto) {
          return showToast("Completá cliente, trabajo, medidas y al menos 1 placa", "error");
@@ -1357,99 +1355,17 @@ function PresupuestoView({ showToast, loggedUser }) {
      "Iluminación LED: " + betaLuz + (betaLuz === 'Si' ? ` (SÍ LLEVA: Incluye ${betaMetrosLed}m de tira LED, ${betaMetrosCable}m de cable cristal, soportes 3D y fuente)` : " (NO LLEVA LUZ)") + ".\n" +
      "Nivel de Instalación: " + betaInstalacion + ".";
 
-     const instruccionFormato = `Actúa como el experto comercial de Polyfan Tech. 
-     Basándote en los DATOS DEL TRABAJO provistos, completa ESTRICTAMENTE esta plantilla HTML. 
-     REGLAS INQUEBRANTABLES:
-     1. Devuelve SOLO el código HTML. No uses la etiqueta de markdown (\`\`\`html).
-     2. Mantén todas las clases de estilo, colores y separadores punteados intactos.
-     3. En "QUÉ INCLUYE", elimina los ítems que digan [SI LLEVA...] si el cliente no lo solicitó. Si lo solicitó, DEBES dejar el ítem con el texto exacto.
-     4. NO incluyas el precio, ni las formas de pago, ni los tiempos de entrega.
-
-     PLANTILLA EXACTA A REPRODUCIR:
-     <div style="margin-bottom: 20px;">
-       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">DESCRIPCIÓN DEL PROYECTO</h3>
-       <p style="margin: 0; color: #444; line-height: 1.6; font-size: 14px;">[Redacta 1 o 2 líneas muy profesionales describiendo el trabajo y sus medidas]</p>
-     </div>
-     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
-     <div style="margin-bottom: 20px;">
-       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">QUÉ INCLUYE</h3>
-       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
-         <li>Fabricación del corpóreo en Polyfan mediante corte CNC de precisión.</li>
-         [SI LLEVA VINILO: <li>Aplicación de gráfica en vinilo impreso de alta calidad.</li>]
-         [SI NO LLEVA VINILO: <li>Pintura y acabado premium con colores a elección.</li>]
-         [SI LLEVA EXTERIOR: <li>Tratamiento de impermeabilización (Laca + Masilla) apto para intemperie.</li>]
-         [SI LLEVA LUZ LED: <li>Sistema de retroiluminación LED (trasera), incluye cableado cristal, soportes de separación 3D y fuente de alimentación.</li>]
-         <li>[Detallar tipo de instalación solicitada o si se entrega listo para colocar sin instalación].</li>
-       </ul>
-     </div>
-     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
-     <div style="margin-bottom: 20px;">
-       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">CARACTERÍSTICAS TÉCNICAS</h3>
-       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
-         <li>Material: [Especificar composición de placas según los datos].</li>
-         <li>Dimensiones totales: [Ancho x Alto].</li>
-         <li>Uso recomendado: [Interior o Exterior].</li>
-       </ul>
-     </div>
-     <div style="border-top: 2px dashed #ddd; margin: 20px 0;"></div>
-     <div style="margin-bottom: 10px;">
-       <h3 style="color: #000; font-size: 13px; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">OBSERVACIONES</h3>
-       <ul style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8; font-size: 14px;">
-         <li>Se requiere confirmación de diseño final y medidas antes de producción.</li>
-         <li>Sujeto a modificaciones según viabilidad técnica de los trazos del logo.</li>
-       </ul>
-     </div>`;
-
-     try {
-         const parte1 = "AQ.Ab8RN6I";
-const parte2 = "AxEKGNZb-hXdBGQHK";
-const parte3 = "OAcICtHgICmxNgvJTiTy766R7Q";
-const API_KEY = parte1 + parte2 + parte3;
-         
-         // ALGORITMO EN CASCADA PARA EVITAR ERRORES DE API
-         const modelosFallbacks = ["gemini-2.5-flash"];
-         let respuestaExitosa = null;
-         let ultimoError = null;
-
-         for (const modelo of modelosFallbacks) {
-             try {
-                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${API_KEY}`;
-                 
-                 const payload = {
-                     contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
-                     generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
-                 };
-
-                 const res = await fetch(url, {
-                     method: "POST",
-                     headers: { "Content-Type": "application/json" },
-                     body: JSON.stringify(payload)
-                 });
-                 
-                 const data = await res.json();
-                 
-                 if (data.candidates && data.candidates.length > 0) {
-                     respuestaExitosa = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
-                     break; 
-                 } else if (data.error) {
-                     ultimoError = data.error.message;
-                 }
-             } catch (err) {
-                 ultimoError = err.message;
-             }
-         }
-
-         if (respuestaExitosa) {
-             setBetaRespuestaIA(respuestaExitosa);
-             showToast("Propuesta generada con éxito");
-         } else {
-             showToast("Error IA: " + (ultimoError || "Modelos no disponibles"), "error");
-         }
-     } catch (err) {
-         showToast("Error de conexión: " + err.message, "error");
-     } finally {
-         setGenerandoIA(false);
-     }
+     fetch(URL_BACKEND_GAS, {
+       method: "POST",
+       headers: { "Content-Type": "text/plain;charset=utf-8" },
+       body: JSON.stringify({ action: "redactarPropuestaIA", promptText: promptText })
+     })
+     .then(res => res.json())
+     .then(data => {
+       if(data.success) { setBetaRespuestaIA(data.text); showToast("Propuesta generada con éxito"); }
+       else { showToast("Error IA: " + data.error, "error"); }
+       setGenerandoIA(false);
+     }).catch(err => { showToast("Error Red: " + err, "error"); setGenerandoIA(false); });
   };
 
   const exportarTicketBeta = () => {
