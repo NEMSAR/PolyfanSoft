@@ -508,6 +508,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
+  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); 
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
@@ -668,7 +669,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
       </div>
 
       <div className="w-full md:w-[55%] lg:w-[60%] space-y-4">
-        {/* PREMIUM: Radar Financiero de Egresos */}
         <div className="flex gap-2 w-full mb-6">
            <div className="flex-1 bg-[#111] border border-[#333] p-4 rounded-2xl text-center">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Inv. Insumos</span>
@@ -1402,42 +1402,30 @@ function PresupuestoView({ showToast, loggedUser }) {
 
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
+         // Apuntamos directo y de forma blindada al modelo oficial flash.
+         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+         
          const payload = {
              contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
              generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
          };
 
-         // ALGORITMO EN CASCADA: Blinda contra cambios de modelo en Google
-         const modelosFallbacks = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"];
-         let respuestaExitosa = null;
-         let ultimoError = null;
-
-         for (const modelo of modelosFallbacks) {
-             try {
-                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${API_KEY}`;
-                 const res = await fetch(url, {
-                     method: "POST",
-                     headers: { "Content-Type": "application/json" },
-                     body: JSON.stringify(payload)
-                 });
-                 const data = await res.json();
-                 
-                 if (data.candidates && data.candidates.length > 0) {
-                     respuestaExitosa = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
-                     break; 
-                 } else if (data.error) {
-                     ultimoError = data.error.message;
-                 }
-             } catch (err) {
-                 ultimoError = err.message;
-             }
-         }
-
-         if (respuestaExitosa) {
-             setBetaRespuestaIA(respuestaExitosa);
+         const res = await fetch(url, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify(payload)
+         });
+         
+         const data = await res.json();
+         
+         if (data.candidates && data.candidates.length > 0) {
+             const textoHTML = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
+             setBetaRespuestaIA(textoHTML);
              showToast("Propuesta generada con éxito");
+         } else if (data.error) {
+             showToast("Error de Google: " + data.error.message, "error");
          } else {
-             showToast("Error IA: " + (ultimoError || "Modelos no disponibles"), "error");
+             showToast("Error desconocido al generar", "error");
          }
      } catch (err) {
          showToast("Error de conexión: " + err.message, "error");
