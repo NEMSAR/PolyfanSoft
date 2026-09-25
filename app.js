@@ -51,6 +51,7 @@ function Input({ label, type = "text", value, onChange, placeholder, disabled = 
   ); 
 }
 
+// Renderizado de gráficos con protección anti-crashes
 function ChartCanvas({ type, data, options, height = 250 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -508,7 +509,6 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
 
   const safeFinanzas = finanzas || [];
 
-  // FECHA DE CORTE Y MATEMATICA RECIENTE BLINDADA
   const FECHA_CORTE = new Date(2026, 8, 17, 14, 0, 0).getTime(); 
   let cajaFisicaGlobal = 0, deudaE = 0, deudaG = 0, fondoTaller = 0;
   let gastosInsumosNuevo = 0, gastosMaquinariaNuevo = 0, gastosOtrosNuevo = 0;
@@ -647,7 +647,7 @@ function FinanzasView({ finanzas, inventario, loggedUser, showToast }) {
           <Input label="Concepto / Observaciones" value={concepto} onChange={setConcepto} />
           
           <div className="flex gap-3 pt-2">
-            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222] transition-colors">Cancelar</button>}
+            {editId && <button onClick={limpiarForm} className="w-1/3 bg-[#111] border border-[#333] text-gray-400 font-black uppercase text-[10px] tracking-widest py-4 rounded-xl hover:bg-[#222]">Cancelar</button>}
             <button onClick={guardarMovimiento} className={`${editId ? 'w-2/3 bg-[#e2ff00] text-black' : 'w-full bg-white text-black hover:bg-gray-200'} font-black uppercase tracking-wider py-4 rounded-xl mt-2 hover:scale-[1.02] transition-all`}>
               {editId ? 'Actualizar Registro' : 'Registrar en Caja'}
             </button>
@@ -1402,30 +1402,45 @@ function PresupuestoView({ showToast, loggedUser }) {
 
      try {
          const API_KEY = "AIzaSyCWn9q9G5wkjVGsDRFusJJQur2SYCJJpwI";
-         // Apuntamos directo y de forma blindada al modelo oficial flash.
-         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
          
-         const payload = {
-             contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
-             generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
-         };
+         // ALGORITMO EN CASCADA PARA EVITAR ERRORES DE API
+         const modelosFallbacks = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"];
+         let respuestaExitosa = null;
+         let ultimoError = null;
 
-         const res = await fetch(url, {
-             method: "POST",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify(payload)
-         });
-         
-         const data = await res.json();
-         
-         if (data.candidates && data.candidates.length > 0) {
-             const textoHTML = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
-             setBetaRespuestaIA(textoHTML);
+         for (const modelo of modelosFallbacks) {
+             try {
+                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${API_KEY}`;
+                 
+                 const payload = {
+                     contents: [{ parts: [{ text: instruccionFormato + "\n\nDATOS DEL TRABAJO:\n" + promptText }] }],
+                     generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
+                 };
+
+                 const res = await fetch(url, {
+                     method: "POST",
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify(payload)
+                 });
+                 
+                 const data = await res.json();
+                 
+                 if (data.candidates && data.candidates.length > 0) {
+                     respuestaExitosa = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').replace(/```/g, '');
+                     break; 
+                 } else if (data.error) {
+                     ultimoError = data.error.message;
+                 }
+             } catch (err) {
+                 ultimoError = err.message;
+             }
+         }
+
+         if (respuestaExitosa) {
+             setBetaRespuestaIA(respuestaExitosa);
              showToast("Propuesta generada con éxito");
-         } else if (data.error) {
-             showToast("Error de Google: " + data.error.message, "error");
          } else {
-             showToast("Error desconocido al generar", "error");
+             showToast("Error IA: " + (ultimoError || "Modelos no disponibles"), "error");
          }
      } catch (err) {
          showToast("Error de conexión: " + err.message, "error");
