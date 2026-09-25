@@ -1407,7 +1407,7 @@ const parte3 = "OAcICtHgICmxNgvJTiTy766R7Q";
 const API_KEY = parte1 + parte2 + parte3;
          
          // ALGORITMO EN CASCADA PARA EVITAR ERRORES DE API
-         const modelosFallbacks = ["gemini-1.5-flash"];
+         const modelosFallbacks = ["gemini-2.5-flash"];
          let respuestaExitosa = null;
          let ultimoError = null;
 
